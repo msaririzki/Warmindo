@@ -10,6 +10,9 @@ def create_app():
 
     # ── Config ────────────────────────────────────────────────────────────────
     app.secret_key = os.environ.get('SECRET_KEY', 'jokian-warmindo-secret-2025-change-me')
+    app.config['SESSION_COOKIE_SECURE'] = True
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'img', 'menu')
@@ -36,6 +39,15 @@ def create_app():
 
     app.register_blueprint(customer_bp)
     app.register_blueprint(admin_bp)
+
+    @app.after_request
+    def add_security_headers(response):
+        response.headers.setdefault('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+        response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        response.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+        return response
 
     # ── Legacy API shims (keep old AJAX calls working) ────────────────────────
     from flask_login import login_required as flask_login_required
