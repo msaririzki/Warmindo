@@ -159,6 +159,19 @@ def _seed_if_empty():
             Menu(nama='Kerupuk',                 kategori='topping',  harga=1000,  stok=99, status_stok='tersedia', foto=''),
             Menu(nama='Sosis',                   kategori='topping',  harga=5000,  stok=5,  status_stok='tersedia', foto=''),
         ]
+        # Link seeded menu records to the bundled image assets when available.
+        image_by_name = {
+            'Indomie Goreng Spesial': 'img/menu/indomie-goreng-special.png',
+            'Indomie Goreng Rendang': 'img/menu/indomie-goreng-rendang.png',
+            'Indomie Kuah Original': 'img/menu/indomie-kuah-original.png',
+            'Indomie Kuah Soto': 'img/menu/indomie-kuah-soto.png',
+            'Indomie Kuah Kari Ayam': 'img/menu/indomie-kuah-kari-ayam.png',
+            'Es Teh Manis': 'img/menu/es-teh-manis.png',
+            'Es Jeruk': 'img/menu/es-jeruk.png',
+        }
+        for menu in menus:
+            if menu.nama in image_by_name:
+                menu.foto = image_by_name[menu.nama]
         db.session.add_all(menus)
         db.session.commit()
         print(f'[SEED] {len(menus)} menu items created')
