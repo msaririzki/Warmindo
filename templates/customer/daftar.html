@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Daftar Akun — Warmindo{% endblock %}
+
+{% block navbar %}{% include "customer/navbar.html" %}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-cream flex items-center justify-center px-4 py-16">
+  <div class="w-full max-w-md">
+
+    <!-- Logo -->
+    <div class="text-center mb-8">
+      <a href="/" class="inline-flex items-center gap-2 text-2xl font-extrabold text-charcoal">
+        <span class="text-3xl">🍜</span>
+        <span>Warmin<span class="text-primary-500">do</span></span>
+      </a>
+      <p class="text-gray-500 text-sm mt-2">Buat akun baru — gratis!</p>
+    </div>
+
+    <!-- Card -->
+    <div class="bg-white rounded-3xl shadow-xl p-8">
+
+      {% if error %}
+      <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm mb-5 flex items-center gap-2">
+        <span>⚠️</span> {{ error }}
+      </div>
+      {% endif %}
+
+      <form method="POST" action="/daftar" class="space-y-4" id="form-daftar">
+        <div>
+          <label for="nama" class="block text-sm font-semibold text-gray-700 mb-1.5">Nama Lengkap <span class="text-red-500">*</span></label>
+          <input type="text" id="nama" name="nama" required placeholder="Nama kamu..."
+                 class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 transition"/>
+        </div>
+        <div>
+          <label for="email" class="block text-sm font-semibold text-gray-700 mb-1.5">Email <span class="text-red-500">*</span></label>
+          <input type="email" id="email" name="email" required placeholder="nama@email.com"
+                 class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 transition"/>
+        </div>
+        <div>
+          <label for="no_hp" class="block text-sm font-semibold text-gray-700 mb-1.5">No. HP <span class="text-gray-400 font-normal">(opsional)</span></label>
+          <input type="tel" id="no_hp" name="no_hp" placeholder="08xxxxxxxxxx"
+                 class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 transition"/>
+        </div>
+        <div>
+          <label for="password" class="block text-sm font-semibold text-gray-700 mb-1.5">Password <span class="text-red-500">*</span></label>
+          <div class="relative">
+            <input type="password" id="password" name="password" required placeholder="Min. 6 karakter"
+                   class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 transition pr-12"/>
+            <button type="button" onclick="togglePw('password', this)"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg">👁</button>
+          </div>
+        </div>
+        <div>
+          <label for="confirm_password" class="block text-sm font-semibold text-gray-700 mb-1.5">Konfirmasi Password <span class="text-red-500">*</span></label>
+          <div class="relative">
+            <input type="password" id="confirm_password" name="confirm_password" required placeholder="Ulangi password"
+                   class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 transition pr-12"/>
+            <button type="button" onclick="togglePw('confirm_password', this)"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg">👁</button>
+          </div>
+          <p id="pw-match-msg" class="text-xs mt-1 hidden"></p>
+        </div>
+
+        <button type="submit"
+                class="w-full bg-primary-500 hover:bg-primary-600 text-white font-bold py-3.5 rounded-xl transition shadow-md text-sm mt-2">
+          Buat Akun
+        </button>
+      </form>
+
+      <p class="text-center text-sm text-gray-500 mt-6">
+        Sudah punya akun?
+        <a href="/masuk" class="text-primary-500 font-semibold hover:underline">Masuk di sini</a>
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function togglePw(id, btn) {
+  const inp = document.getElementById(id);
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+}
+
+// Live password match check
+const pw  = document.getElementById('password');
+const pw2 = document.getElementById('confirm_password');
+const msg = document.getElementById('pw-match-msg');
+function checkMatch() {
+  if (!pw2.value) { msg.classList.add('hidden'); return; }
+  msg.classList.remove('hidden');
+  if (pw.value === pw2.value) {
+    msg.textContent = '✅ Password cocok';
+    msg.className = 'text-xs mt-1 text-green-600';
+  } else {
+    msg.textContent = '❌ Password tidak cocok';
+    msg.className = 'text-xs mt-1 text-red-500';
+  }
+}
+pw.addEventListener('input', checkMatch);
+pw2.addEventListener('input', checkMatch);
+</script>
+{% endblock %}

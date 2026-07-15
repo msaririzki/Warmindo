@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Masuk — Warmindo{% endblock %}
+
+{% block navbar %}{% include "customer/navbar.html" %}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-cream flex items-center justify-center px-4 py-16">
+  <div class="w-full max-w-md">
+
+    <!-- Logo -->
+    <div class="text-center mb-8">
+      <a href="/" class="inline-flex items-center gap-2 text-2xl font-extrabold text-charcoal">
+        <span class="text-3xl">🍜</span>
+        <span>Warmin<span class="text-primary-500">do</span></span>
+      </a>
+      <p class="text-gray-500 text-sm mt-2">Masuk ke akun kamu</p>
+    </div>
+
+    <!-- Card -->
+    <div class="bg-white rounded-3xl shadow-xl p-8">
+
+      {% if error %}
+      <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm mb-5 flex items-center gap-2">
+        <span>⚠️</span> {{ error }}
+      </div>
+      {% endif %}
+
+      <form method="POST" action="/masuk" class="space-y-5">
+        <div>
+          <label for="email" class="block text-sm font-semibold text-gray-700 mb-1.5">Email</label>
+          <input type="email" id="email" name="email" required placeholder="nama@email.com"
+                 class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 transition"/>
+        </div>
+        <div>
+          <label for="password" class="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+          <div class="relative">
+            <input type="password" id="password" name="password" required placeholder="••••••••"
+                   class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 transition pr-12"/>
+            <button type="button" onclick="togglePw('password', this)"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg">👁</button>
+          </div>
+        </div>
+        <button type="submit"
+                class="w-full bg-primary-500 hover:bg-primary-600 text-white font-bold py-3.5 rounded-xl transition shadow-md text-sm">
+          Masuk Sekarang
+        </button>
+      </form>
+
+      <p class="text-center text-sm text-gray-500 mt-6">
+        Belum punya akun?
+        <a href="/daftar" class="text-primary-500 font-semibold hover:underline">Daftar di sini</a>
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function togglePw(id, btn) {
+  const inp = document.getElementById(id);
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+}
+</script>
+{% endblock %}

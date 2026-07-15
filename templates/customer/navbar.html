@@ -1,0 +1,73 @@
+
+<nav class="bg-white/95 backdrop-blur-md sticky top-0 z-40 border-b border-gray-100 shadow-sm">
+  <div class="container mx-auto px-4">
+    <div class="flex items-center justify-between h-16">
+      <!-- Logo -->
+      <a href="/" class="flex items-center gap-2 font-extrabold text-xl text-charcoal hover:text-primary-500 transition">
+        <span class="text-2xl">🍜</span>
+        <span>Warmin<span class="text-primary-500">do</span></span>
+      </a>
+
+      <!-- Desktop nav links -->
+      <div class="hidden md:flex items-center gap-6">
+        <a href="/" class="text-gray-600 hover:text-primary-500 font-medium transition text-sm">Beranda</a>
+        <a href="/menu" class="text-gray-600 hover:text-primary-500 font-medium transition text-sm">Menu</a>
+        <a href="#lokasi" class="text-gray-600 hover:text-primary-500 font-medium transition text-sm">Lokasi</a>
+      </div>
+
+      <!-- Right: Cart + Auth -->
+      <div class="flex items-center gap-2">
+        <!-- Cart -->
+        <a href="/keranjang" id="nav-cart" class="relative flex items-center gap-2 bg-primary-50 hover:bg-primary-100 text-primary-600 font-semibold px-3 py-2 rounded-xl transition text-sm">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
+          <span class="hidden sm:inline">Keranjang</span>
+          <span class="cart-badge absolute -top-1 -right-1 bg-primary-500 text-white text-xs font-extrabold w-5 h-5 rounded-full flex items-center justify-center hidden">0</span>
+        </a>
+
+        <!-- Auth: desktop -->
+        <div class="hidden md:flex items-center gap-2">
+          {% if session.get('customer_id') %}
+            <a href="/profil" class="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-charcoal font-semibold px-3 py-2 rounded-xl transition text-sm">
+              <span>👤</span>
+              <span id="nav-customer-nama" class="max-w-[100px] truncate">Profil</span>
+            </a>
+            <a href="/keluar" class="text-sm text-red-500 hover:bg-red-50 px-3 py-2 rounded-xl transition font-medium">Keluar</a>
+          {% else %}
+            <a href="/masuk" class="text-sm font-semibold text-primary-500 hover:bg-primary-50 px-4 py-2 rounded-xl transition">Masuk</a>
+            <a href="/daftar" class="text-sm font-bold bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-xl transition shadow-sm">Daftar</a>
+          {% endif %}
+        </div>
+
+        <!-- Mobile menu button -->
+        <button id="mobile-menu-btn" class="md:hidden p-2 rounded-lg hover:bg-gray-100 transition" aria-label="Menu">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile nav -->
+    <div id="mobile-menu" class="md:hidden hidden pb-4 border-t border-gray-100 pt-3 space-y-1">
+      <a href="/" class="block px-3 py-2 text-gray-700 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition text-sm font-medium">🏠 Beranda</a>
+      <a href="/menu" class="block px-3 py-2 text-gray-700 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition text-sm font-medium">🍜 Menu</a>
+      <a href="#lokasi" class="block px-3 py-2 text-gray-700 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition text-sm font-medium">📍 Lokasi</a>
+      <hr class="border-gray-100 my-1"/>
+      {% if session.get('customer_id') %}
+        <a href="/profil" class="block px-3 py-2 text-gray-700 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition text-sm font-medium">👤 Profil Saya</a>
+        <a href="/keluar" class="block px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg transition text-sm font-medium">🚪 Keluar</a>
+      {% else %}
+        <a href="/masuk" class="block px-3 py-2 text-primary-500 hover:bg-primary-50 rounded-lg transition text-sm font-semibold">🔑 Masuk</a>
+        <a href="/daftar" class="block px-3 py-2 bg-primary-500 text-white rounded-lg transition text-sm font-bold text-center">Daftar Akun</a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+
+<script>
+document.getElementById('mobile-menu-btn')?.addEventListener('click', () => {
+  document.getElementById('mobile-menu')?.classList.toggle('hidden');
+});
+</script>

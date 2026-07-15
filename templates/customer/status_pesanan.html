@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block title %}Status Pesanan {{ pesanan.kode_order }} — WARMINDO{% endblock %}
+
+{% block navbar %}{% include "customer/navbar.html" %}{% endblock %}
+
+{% block content %}
+{# Dummy fallback — Flask akan passing `pesanan` dari route #}
+{% if pesanan is not defined %}
+  {% set pesanan = {
+    'kode_order': 'JK123456',
+    'nama_customer': 'Budi Santoso',
+    'status': 'diproses',
+    'metode_ambil': 'ambil',
+    'metode_bayar': 'cod',
+    'total_harga': 29000,
+    'waktu_order': '2025-07-04 14:30',
+    'catatan': 'Tidak pedas ya kak',
+    'items': [
+      {'nama': 'Indomie Goreng Spesial', 'varian': 'Level 1', 'qty': 2, 'subtotal': 24000},
+      {'nama': 'Es Teh Manis', 'varian': '', 'qty': 1, 'subtotal': 5000},
+    ]
+  } %}
+{% endif %}
+
+<div class="container mx-auto px-4 max-w-lg py-8">
+
+  <!-- Header card -->
+  <div class="bg-gradient-to-br from-primary-600 to-primary-800 rounded-3xl p-6 text-white text-center mb-6 relative overflow-hidden">
+    <div class="absolute inset-0 opacity-10">
+      <div class="w-40 h-40 bg-white rounded-full absolute -top-10 -right-10"></div>
+      <div class="w-32 h-32 bg-white rounded-full absolute -bottom-8 -left-8"></div>
+    </div>
+    <div class="relative z-10">
+      <div class="text-sm text-primary-200 mb-1">Kode Pesanan</div>
+      <div class="text-4xl font-extrabold tracking-widest mb-3 font-mono">{{ pesanan.kode_order }}</div>
+      <div id="live-status-badge">
+        {% if pesanan.status == 'diproses' %}
+          <span class="inline-flex items-center gap-2 bg-yellow-400/20 text-yellow-200 border border-yellow-400/30 font-semibold px-4 py-1.5 rounded-full text-sm">
+            <span class="w-2 h-2 bg-yellow-300 rounded-full animate-pulse"></span> Sedang Diproses
+          </span>
+        {% elif pesanan.status == 'siap' %}
+          <span class="inline-flex items-center gap-2 bg-green-400/20 text-green-200 border border-green-400/30 font-semibold px-4 py-1.5 rounded-full text-sm">
+            <span class="w-2 h-2 bg-green-300 rounded-full animate-pulse"></span> Siap Diambil!
+          </span>
+        {% elif pesanan.status == 'selesai' %}
+          <span class="inline-flex items-center gap-2 bg-blue-400/20 text-blue-200 border border-blue-400/30 font-semibold px-4 py-1.5 rounded-full text-sm">
+            ✅ Selesai
+          </span>
+        {% else %}
+          <span class="inline-flex items-center gap-2 bg-gray-400/20 text-gray-200 border border-gray-400/30 font-semibold px-4 py-1.5 rounded-full text-sm">
+            ❌ Dibatalkan
+          </span>
+        {% endif %}
+      </div>
+      <p class="text-primary-200 text-xs mt-3">📷 Screenshot kode ini untuk referensi pesanan</p>
+    </div>
+  </div>
+
+  <!-- Stepper -->
+  <div class="bg-white rounded-2xl shadow-sm p-5 mb-5">
+    <h2 class="font-bold text-charcoal mb-4 text-sm uppercase tracking-wide">Progress Pesanan</h2>
+    <div class="flex items-center" id="stepper">
+      {% set steps = [('diproses','Diproses','🍳'), ('siap','Siap','✅'), ('selesai','Selesai','🎉')] %}
+      {% set status_order = ['diproses','siap','selesai'] %}
+      {% set current_idx = status_order.index(pesanan.status) if pesanan.status in status_order else 0 %}
+
+      {% for s_val, s_label, s_icon in steps %}
+        {% set s_idx = loop.index0 %}
+        <div class="flex-1 flex flex-col items-center">
+          <div class="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold mb-2
+            {% if s_idx < current_idx %}stepper-done
+            {% elif s_idx == current_idx %}stepper-active
+            {% else %}stepper-inactive{% endif %}">
+            {{ s_icon if s_idx <= current_idx else s_idx + 1 }}
+          </div>
+          <div class="text-xs font-semibold text-center
+            {% if s_idx <= current_idx %}text-charcoal{% else %}text-gray-400{% endif %}">{{ s_label }}</div>
+        </div>
+        {% if not loop.last %}
+        <div class="flex-1 h-1 rounded-full mb-6
+          {% if s_idx < current_idx %}bg-green-400{% else %}bg-gray-200{% endif %}"></div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Detail pesanan -->
+  <div class="bg-white rounded-2xl shadow-sm p-5 mb-5">
+    <h2 class="font-bold text-charcoal mb-4">📦 Detail Pesanan</h2>
+    <div class="space-y-2 mb-4">
+      {% for item in pesanan['items'] %}
+      <div class="flex justify-between items-center text-sm">
+        <div class="flex-1">
+          <span class="font-medium">{{ item.nama }}</span>
+          {% if item.varian %}<span class="text-gray-400"> · {{ item.varian }}</span>{% endif %}
+          <span class="text-gray-400"> × {{ item.qty }}</span>
+        </div>
+        <span class="font-semibold text-charcoal">Rp {{ '{:,}'.format(item.subtotal).replace(',','.') }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="border-t border-gray-100 pt-3">
+      <div class="flex justify-between text-sm text-gray-500 mb-1">
+        <span>Nama</span><span class="text-charcoal font-medium">{{ pesanan.nama_customer }}</span>
+      </div>
+      <div class="flex justify-between text-sm text-gray-500 mb-1">
+        <span>Pengambilan</span>
+        <span class="text-charcoal font-medium">{{ 'Ambil di Tempat' if pesanan.metode_ambil == 'ambil' else 'Diantar' }}</span>
+      </div>
+      <div class="flex justify-between text-sm text-gray-500 mb-1">
+        <span>Pembayaran</span>
+        <span class="text-charcoal font-medium">{{ pesanan.metode_bayar | upper }}</span>
+      </div>
+      {% if pesanan.catatan %}
+      <div class="flex justify-between text-sm text-gray-500 mb-1">
+        <span>Catatan</span><span class="text-charcoal font-medium">{{ pesanan.catatan }}</span>
+      </div>
+      {% endif %}
+      <div class="flex justify-between font-extrabold text-charcoal mt-2 pt-2 border-t border-gray-100">
+        <span>Total</span>
+        <span class="text-primary-500 text-xl">Rp {{ '{:,}'.format(pesanan.total_harga).replace(',','.') }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA buttons -->
+  <div class="space-y-3">
+    {% if pesanan.status == 'diproses' %}
+    <button onclick="openModal('modal-batal-pesanan')" id="btn-batal-pesanan"
+            class="w-full flex items-center justify-center gap-2 bg-white border-2 border-red-400 hover:bg-red-50 text-red-500 font-bold py-3.5 rounded-2xl transition">
+      ❌ Batalkan Pesanan
+    </button>
+    {% endif %}
+    <a href="https://wa.me/6281234567890?text=Halo+kak,+saya+mau+tanya+pesanan+kode+{{ pesanan.kode_order }}"
+       class="flex items-center justify-center gap-3 bg-green-500 hover:bg-green-600 text-white font-bold py-3.5 rounded-2xl transition shadow-lg" target="_blank">
+      <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Hubungi via WhatsApp
+    </a>
+    <a href="/menu" class="flex items-center justify-center gap-2 border-2 border-primary-500 text-primary-500 hover:bg-primary-50 font-bold py-3.5 rounded-2xl transition">
+      🍜 Pesan Lagi
+    </a>
+  </div>
+
+  <!-- Modal Konfirmasi Batal Pesanan -->
+  {% if pesanan.status == 'diproses' %}
+  <div id="modal-batal-pesanan" class="modal-overlay fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="modal-box bg-white w-full max-w-sm rounded-3xl overflow-hidden scale-95 opacity-0 transition-all p-6 text-center">
+      <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <span class="text-3xl">⚠️</span>
+      </div>
+      <h3 class="text-xl font-extrabold text-charcoal mb-2">Batalkan Pesanan?</h3>
+      <p class="text-gray-500 text-sm mb-6">Pesanan <strong>{{ pesanan.kode_order }}</strong> akan dibatalkan dan tidak bisa dikembalikan.</p>
+      <div class="flex gap-3">
+        <button onclick="closeModal('modal-batal-pesanan')"
+                class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl text-sm transition">
+          Kembali
+        </button>
+        <button onclick="konfirmasiBatalPesanan()" id="btn-konfirmasi-batal"
+                class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl text-sm transition">
+          Ya, Batalkan
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Polling ringan untuk update status
+const kodeOrder = '{{ pesanan.kode_order }}';
+let pollingInterval = null;
+
+function updateStatusBadge(status) {
+  const badges = {
+    diproses: `<span class="inline-flex items-center gap-2 bg-yellow-400/20 text-yellow-200 border border-yellow-400/30 font-semibold px-4 py-1.5 rounded-full text-sm"><span class="w-2 h-2 bg-yellow-300 rounded-full animate-pulse"></span> Sedang Diproses</span>`,
+    siap:     `<span class="inline-flex items-center gap-2 bg-green-400/20 text-green-200 border border-green-400/30 font-semibold px-4 py-1.5 rounded-full text-sm"><span class="w-2 h-2 bg-green-300 rounded-full animate-pulse"></span> Siap Diambil!</span>`,
+    selesai:  `<span class="inline-flex items-center gap-2 bg-blue-400/20 text-blue-200 border border-blue-400/30 font-semibold px-4 py-1.5 rounded-full text-sm">✅ Selesai</span>`,
+    batal:    `<span class="inline-flex items-center gap-2 bg-gray-400/20 text-gray-200 border border-gray-400/30 font-semibold px-4 py-1.5 rounded-full text-sm">❌ Dibatalkan</span>`,
+  };
+  const el = document.getElementById('live-status-badge');
+  if (el && badges[status]) el.innerHTML = badges[status];
+}
+
+function konfirmasiBatalPesanan() {
+  const btn = document.getElementById('btn-konfirmasi-batal');
+  if (btn) { btn.disabled = true; btn.textContent = 'Membatalkan...'; }
+
+  fetch(`/pesanan/${kodeOrder}/batal`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  })
+  .then(r => r.json())
+  .then(data => {
+    closeModal('modal-batal-pesanan');
+    if (data.success) {
+      updateStatusBadge('batal');
+      // Hide the cancel button
+      const batalBtn = document.getElementById('btn-batal-pesanan');
+      if (batalBtn) batalBtn.style.display = 'none';
+      showToast('Pesanan berhasil dibatalkan', 'info');
+      // Reload page after short delay to update stepper
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      showToast(data.error || 'Gagal membatalkan pesanan', 'error');
+      if (btn) { btn.disabled = false; btn.textContent = 'Ya, Batalkan'; }
+    }
+  })
+  .catch(() => {
+    closeModal('modal-batal-pesanan');
+    showToast('Koneksi gagal, coba lagi', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Ya, Batalkan'; }
+  });
+}
+
+// Uncomment to enable polling:
+// pollingInterval = startPolling(`/api/pesanan/${kodeOrder}`, 6000, data => {
+//   updateStatusBadge(data.status);
+// });
+</script>
+{% endblock %}
+
+{% block footer %}{% include "customer/footer.html" %}{% endblock %}

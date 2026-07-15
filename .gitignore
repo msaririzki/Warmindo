@@ -1,0 +1,69 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Flask
+# instance/  ← jangan exclude, biarkan database.db ikut ter-commit
+
+# Database
+# *.db        ← izinkan database.db masuk ke project
+# *.sqlite
+# *.sqlite3
+
+# Distribution / packaging
+.eggs/
+dist/
+build/
+*.egg-info/
+*.egg
+MANIFEST
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Runtime data (generated on the server)
+instance/
+*.db
+*.sqlite
+*.sqlite3

@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+{% block title %}Kasir POS — WARMINDO{% endblock %}
+
+{# current_page, store_open, pending_count come from route context #}
+
+{% block navbar %}{% include "admin/sidebar.html" %}{% endblock %}
+
+{% block content %}
+<div class="lg:ml-64 min-h-screen bg-gray-50 flex flex-col">
+
+  <!-- Top bar kasir -->
+  <div class="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+    <h1 class="text-lg font-extrabold text-charcoal flex items-center gap-2">🛒 Mode Kasir</h1>
+    <div class="flex items-center gap-3">
+      <div class="text-sm text-gray-500" id="kasir-time"></div>
+      <button onclick="resetTransaction()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1.5 rounded-lg transition font-semibold">
+        Reset
+      </button>
+    </div>
+  </div>
+
+  <!-- POS Layout -->
+  <div class="flex-1 flex overflow-hidden">
+
+    <!-- LEFT: Menu Grid -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+      <!-- Category tabs -->
+      <div class="bg-white border-b border-gray-100 px-4 py-3">
+        <div class="flex gap-2 overflow-x-auto">
+          {% for val, label in [('semua','🔥 Semua'),('indomie','🍜 Indomie'),('nasi','🍚 Nasi'),('minuman','🥤 Minuman'),('topping','🥚 Topping')] %}
+          <button onclick="setPOSCategory('{{ val }}')" data-cat="{{ val }}"
+                  class="pos-cat-btn flex-shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all
+                         {% if loop.first %}bg-primary-500 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+            {{ label }}
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Menu grid scrollable -->
+      <div class="flex-1 overflow-y-auto p-4">
+        <div class="pos-menu-grid" id="pos-menu-grid">
+          {% for m in menu %}
+          <button onclick="posAddItemFromEl(this)" data-kategori="{{ m.kategori }}"
+                  data-id="{{ m.id }}" data-nama="{{ m.nama }}" data-harga="{{ m.harga }}"
+                  class="pos-item-btn bg-white rounded-xl p-3 text-left border-2 border-transparent hover:border-primary-400 transition active:scale-95
+                         {% if m.stok == 0 %}opacity-40 cursor-not-allowed{% endif %}"
+                  {% if m.stok == 0 %}disabled{% endif %}>
+            <div class="text-2xl mb-2 text-center">
+              {{ '🍜' if m.kategori == 'indomie' else ('🍚' if m.kategori == 'nasi' else ('🥤' if m.kategori == 'minuman' else '🥚')) }}
+            </div>
+            <div class="text-xs font-bold text-charcoal leading-tight line-clamp-2 mb-1">{{ m.nama }}</div>
+            <div class="text-primary-500 font-extrabold text-xs">Rp {{ '{:,}'.format(m.harga).replace(',','.') }}</div>
+            {% if m.stok > 0 and m.stok < 10 %}
+            <div class="text-yellow-600 text-xs mt-1">Sisa {{ m.stok }}</div>
+            {% elif m.stok == 0 %}
+            <div class="text-gray-400 text-xs mt-1">Habis</div>
+            {% endif %}
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Order Summary -->
+    <div class="w-80 lg:w-96 bg-white border-l border-gray-200 flex flex-col">
+      <!-- Header -->
+      <div class="px-5 py-4 border-b border-gray-100">
+        <h2 class="font-extrabold text-charcoal">Pesanan Berjalan</h2>
+        <div class="grid grid-cols-2 gap-2 mt-3">
+          <input type="text" id="pos-nama" placeholder="Nama (opsional)" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"/>
+          <input type="tel" id="pos-nohp" placeholder="No HP (opsional)" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"/>
+        </div>
+      </div>
+
+      <!-- Order items -->
+      <div class="flex-1 overflow-y-auto px-4 py-3" id="pos-order-list">
+        <div class="flex flex-col items-center justify-center h-32 text-center text-gray-400">
+          <div class="text-4xl mb-2">🛒</div>
+          <p class="text-sm">Klik menu di kiri untuk menambahkan</p>
+        </div>
+      </div>
+
+      <!-- Total & checkout -->
+      <div class="border-t border-gray-100 p-4 space-y-3">
+        <div class="flex justify-between text-charcoal font-extrabold text-xl">
+          <span>Total</span>
+          <span id="pos-total" class="text-primary-500">Rp 0</span>
+        </div>
+        <!-- Bayar -->
+        <div>
+          <label class="text-xs font-semibold text-gray-500 mb-1 block">Uang Diterima</label>
+          <input type="number" id="pos-bayar" placeholder="Nominal uang..." oninput="calcKembalian()"
+                 class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 mb-2"/>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-500">Kembalian</span>
+            <span id="pos-kembalian" class="font-bold text-green-600">Rp 0</span>
+          </div>
+        </div>
+        <button onclick="selesaikanTransaksi()"
+                class="w-full bg-primary-500 hover:bg-primary-600 active:bg-primary-700 text-white font-extrabold py-4 rounded-2xl transition text-base shadow-lg">
+          ✅ Selesaikan Transaksi
+        </button>
+        <button onclick="openModal('modal-batal-kasir')" id="btn-batal-kasir"
+                class="w-full mt-2 bg-white border-2 border-red-400 hover:bg-red-50 text-red-500 font-bold py-3 rounded-2xl transition text-sm flex items-center justify-center gap-2">
+          ❌ Batalkan Transaksi
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Struk -->
+<div id="modal-struk" class="modal-overlay fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+  <div class="modal-box bg-white w-full max-w-sm rounded-3xl overflow-hidden scale-95 opacity-0 transition-all">
+    <div id="struk" class="p-6">
+      <div class="text-center border-b-2 border-dashed border-gray-300 pb-4 mb-4">
+        <div class="text-2xl font-extrabold">🍜 WARMINDO</div>
+        <div class="text-xs text-gray-500 mt-1">Jl. Contoh No. 123 · 07.00–22.00</div>
+        <div id="struk-kode" class="font-mono text-sm text-primary-500 mt-2"></div>
+        <div id="struk-waktu" class="text-xs text-gray-400"></div>
+      </div>
+      <div id="struk-items" class="space-y-1 text-sm mb-4"></div>
+      <div class="border-t-2 border-dashed border-gray-300 pt-3 space-y-1">
+        <div class="flex justify-between font-extrabold text-base">
+          <span>TOTAL</span>
+          <span id="struk-total"></span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span>Bayar</span><span id="struk-bayar"></span>
+        </div>
+        <div class="flex justify-between text-sm text-green-600 font-semibold">
+          <span>Kembalian</span><span id="struk-kembalian"></span>
+        </div>
+      </div>
+      <div class="text-center text-xs text-gray-400 mt-4 border-t border-dashed pt-4">
+        Terima kasih sudah mampir! ❤️<br/>Sampai jumpa lagi~
+      </div>
+    </div>
+    <div class="p-4 flex gap-3 border-t border-gray-100">
+      <button onclick="window.print()" class="flex-1 bg-charcoal text-white font-bold py-3 rounded-xl text-sm hover:bg-gray-800 transition">🖨️ Print Struk</button>
+      <button onclick="closeModal('modal-struk');resetTransaction()" class="flex-1 bg-primary-500 text-white font-bold py-3 rounded-xl text-sm hover:bg-primary-600 transition">✅ Transaksi Baru</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Konfirmasi Batal Kasir -->
+<div id="modal-batal-kasir" class="modal-overlay fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+  <div class="modal-box bg-white w-full max-w-sm rounded-3xl overflow-hidden scale-95 opacity-0 transition-all p-6 text-center">
+    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+      <span class="text-3xl">⚠️</span>
+    </div>
+    <h3 class="text-xl font-extrabold text-charcoal mb-2">Batalkan Transaksi?</h3>
+    <p class="text-gray-500 text-sm mb-6">Semua item yang sudah ditambahkan akan dihapus dan transaksi direset dari awal.</p>
+    <div class="flex gap-3">
+      <button onclick="closeModal('modal-batal-kasir')"
+              class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl text-sm transition">
+        Kembali
+      </button>
+      <button onclick="konfirmasiBatalKasir()"
+              class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl text-sm transition">
+        Ya, Batalkan
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let posOrder = [];
+
+// Live clock
+setInterval(() => {
+  const el = document.getElementById('kasir-time');
+  if (el) {
+    const now = new Date();
+    el.textContent = now.toLocaleTimeString('id-ID');
+  }
+}, 1000);
+
+function setPOSCategory(cat) {
+  document.querySelectorAll('.pos-cat-btn').forEach(b => {
+    const active = b.dataset.cat === cat;
+    b.classList.toggle('bg-primary-500', active);
+    b.classList.toggle('text-white', active);
+    b.classList.toggle('bg-gray-100', !active);
+    b.classList.toggle('text-gray-600', !active);
+  });
+  document.querySelectorAll('.pos-item-btn').forEach(btn => {
+    const match = cat === 'semua' || btn.dataset.kategori === cat;
+    btn.style.display = match ? '' : 'none';
+  });
+}
+
+function posAddItemFromEl(btn) {
+  const item = {
+    id:    btn.dataset.id,
+    nama:  btn.dataset.nama,
+    harga: parseInt(btn.dataset.harga),
+  };
+  posAddItem(item);
+}
+
+function posAddItem(item) {
+  const existing = posOrder.find(i => i.id === item.id);
+  if (existing) { existing.qty++; }
+  else { posOrder.push({ ...item, qty: 1 }); }
+  renderPOSOrder();
+}
+
+function renderPOSOrder() {
+  const el = document.getElementById('pos-order-list');
+  if (!posOrder.length) {
+    el.innerHTML = `<div class="flex flex-col items-center justify-center h-32 text-center text-gray-400"><div class="text-4xl mb-2">🛒</div><p class="text-sm">Klik menu di kiri untuk menambahkan</p></div>`;
+    document.getElementById('pos-total').textContent = 'Rp 0';
+    return;
+  }
+
+  const total = posOrder.reduce((s, i) => s + i.harga * i.qty, 0);
+
+  el.innerHTML = posOrder.map((item, idx) => `
+    <div class="flex items-center gap-2 py-2 border-b border-gray-50">
+      <div class="flex-1 min-w-0">
+        <div class="text-sm font-semibold text-charcoal leading-tight">${item.nama}</div>
+        <div class="text-xs text-primary-500 font-bold">${formatRupiah(item.harga)}</div>
+      </div>
+      <div class="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+        <button onclick="posChangeQty(${idx}, -1)" class="w-6 h-6 flex items-center justify-center text-primary-500 font-bold hover:bg-white rounded-md transition text-sm">−</button>
+        <span class="text-xs font-bold w-5 text-center">${item.qty}</span>
+        <button onclick="posChangeQty(${idx}, 1)"  class="w-6 h-6 flex items-center justify-center text-primary-500 font-bold hover:bg-white rounded-md transition text-sm">+</button>
+      </div>
+      <div class="text-xs font-bold text-charcoal w-16 text-right">${formatRupiah(item.harga * item.qty)}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('pos-total').textContent = formatRupiah(total);
+  calcKembalian();
+}
+
+function posChangeQty(idx, delta) {
+  posOrder[idx].qty += delta;
+  if (posOrder[idx].qty <= 0) posOrder.splice(idx, 1);
+  renderPOSOrder();
+}
+
+function calcKembalian() {
+  const total = posOrder.reduce((s, i) => s + i.harga * i.qty, 0);
+  const bayar = parseInt(document.getElementById('pos-bayar').value) || 0;
+  const kembalian = bayar - total;
+  document.getElementById('pos-kembalian').textContent = kembalian >= 0 ? formatRupiah(kembalian) : '—';
+  document.getElementById('pos-kembalian').className = kembalian >= 0 ? 'font-bold text-green-600' : 'font-bold text-red-500';
+}
+
+function selesaikanTransaksi() {
+  if (!posOrder.length) { showToast('Tambahkan item dulu!', 'warning'); return; }
+
+  const total = posOrder.reduce((s, i) => s + i.harga * i.qty, 0);
+  const bayar = parseInt(document.getElementById('pos-bayar').value) || 0;
+  const payload = {
+    items: posOrder.map(i => ({ menu_id: parseInt(i.id), jumlah: i.qty })),
+    nama_customer: document.getElementById('pos-nama').value || 'Walk-in',
+    no_hp: document.getElementById('pos-nohp').value || '',
+    metode_bayar: 'cod',
+  };
+
+  fetch('/admin/kasir', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      const kode = data.kode_order;
+      const waktu = new Date().toLocaleString('id-ID');
+
+      document.getElementById('struk-kode').textContent = kode;
+      document.getElementById('struk-waktu').textContent = waktu;
+      document.getElementById('struk-items').innerHTML = posOrder.map(i =>
+        `<div class="flex justify-between"><span>${i.nama} ×${i.qty}</span><span>${formatRupiah(i.harga * i.qty)}</span></div>`
+      ).join('');
+      document.getElementById('struk-total').textContent = formatRupiah(data.total || total);
+      document.getElementById('struk-bayar').textContent = formatRupiah(bayar || total);
+      document.getElementById('struk-kembalian').textContent = formatRupiah(Math.max(0, bayar - total));
+      openModal('modal-struk');
+    } else {
+      showToast(data.error || 'Transaksi gagal', 'error');
+    }
+  })
+  .catch(() => showToast('Koneksi server gagal', 'error'));
+}
+
+function resetTransaction() {
+  posOrder = [];
+  document.getElementById('pos-nama').value = '';
+  document.getElementById('pos-nohp').value = '';
+  document.getElementById('pos-bayar').value = '';
+  renderPOSOrder();
+}
+
+function konfirmasiBatalKasir() {
+  closeModal('modal-batal-kasir');
+  resetTransaction();
+  showToast('Transaksi dibatalkan', 'info');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Keranjang — WARMINDO{% endblock %}
+
+{% block navbar %}{% include "customer/navbar.html" %}{% endblock %}
+
+{% block content %}
+<div class="bg-cream min-h-screen py-8 px-4">
+  <div class="container mx-auto max-w-2xl">
+
+    <h1 class="text-3xl font-extrabold text-charcoal mb-6 flex items-center gap-3">
+      <svg class="w-8 h-8 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+      </svg>
+      Keranjang Pesanan
+    </h1>
+
+    <!-- Empty state -->
+    <div id="empty-cart" style="display:none" class="flex flex-col items-center justify-center py-20 text-center">
+      <div class="w-28 h-28 bg-orange-100 rounded-3xl flex items-center justify-center text-6xl mb-6">🛒</div>
+      <h2 class="text-2xl font-bold text-charcoal mb-2">Keranjang Masih Kosong</h2>
+      <p class="text-gray-500 mb-8 max-w-xs">Yuk, pilih menu favoritmu dulu! Ada banyak pilihan enak yang menunggu.</p>
+      <a href="/menu" class="bg-primary-500 hover:bg-primary-600 text-white font-bold px-8 py-3.5 rounded-2xl transition shadow-md">
+        Lihat Menu 🍜
+      </a>
+    </div>
+
+    <!-- Cart items -->
+    <div id="cart-items-container">
+      <div id="cart-list" class="space-y-3 mb-6"></div>
+
+      <!-- Summary card -->
+      <div id="cart-summary" class="bg-white rounded-3xl shadow-sm p-6">
+        <h3 class="font-bold text-charcoal mb-4">Ringkasan Pesanan</h3>
+        <div class="space-y-3 mb-5">
+          <div class="flex justify-between text-gray-500 text-sm">
+            <span>Subtotal</span>
+            <span id="subtotal-display" class="font-semibold text-charcoal">Rp 0</span>
+          </div>
+          <div class="flex justify-between text-gray-500 text-sm">
+            <span>Ongkos kirim</span>
+            <span class="text-green-600 font-medium">Dihitung saat checkout</span>
+          </div>
+          <div class="border-t border-gray-100 pt-3 mt-1 flex justify-between font-extrabold text-lg text-charcoal">
+            <span>Total</span>
+            <span id="total-display" class="text-primary-500">Rp 0</span>
+          </div>
+        </div>
+        <a href="/checkout" id="btn-checkout"
+           class="block w-full bg-primary-500 hover:bg-primary-600 text-white font-bold py-4 rounded-2xl text-center transition text-base shadow-md">
+          Lanjut ke Checkout →
+        </a>
+        <a href="/menu" class="block w-full text-center text-primary-500 font-medium py-2.5 mt-3 hover:underline text-sm">
+          + Tambah item lagi
+        </a>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function renderCart() {
+  const items = Cart.getAll();
+  const list = document.getElementById('cart-list');
+  const emptyEl = document.getElementById('empty-cart');
+  const containerEl = document.getElementById('cart-items-container');
+
+  if (items.length === 0) {
+    document.getElementById('empty-cart').style.display = 'flex';
+    document.getElementById('empty-cart').style.flexDirection = 'column';
+    document.getElementById('empty-cart').style.alignItems = 'center';
+    containerEl.style.display = 'none';
+    return;
+  }
+  document.getElementById('empty-cart').style.display = 'none';
+  containerEl.style.display = '';
+
+  list.innerHTML = items.map((item, idx) => `
+    <div class="bg-white rounded-2xl shadow-sm p-4 flex gap-4 items-start" id="cart-item-${idx}">
+      <div class="w-16 h-16 rounded-xl flex-shrink-0 overflow-hidden bg-orange-100 flex items-center justify-center">
+        ${item.foto
+          ? `<img src="${item.foto}" alt="${item.nama}" class="w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><span style="display:none" class="text-2xl flex items-center justify-center w-full h-full">🍜</span>`
+          : `<span class="text-2xl">🍜</span>`
+        }
+      </div>
+      <div class="flex-1 min-w-0">
+        <h3 class="font-bold text-charcoal text-sm mb-0.5 line-clamp-2">${item.nama}</h3>
+        <div class="text-xs text-gray-400 mb-2">${item.varian}${item.catatan ? ' · ' + item.catatan : ''}</div>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-1 bg-gray-100 rounded-xl px-2 py-1">
+            <button onclick="updateItemQty(${idx}, ${item.qty - 1})"
+                    class="w-7 h-7 flex items-center justify-center text-primary-500 font-bold hover:bg-white rounded-lg transition text-lg">&minus;</button>
+            <span class="text-sm font-bold w-6 text-center">${item.qty}</span>
+            <button onclick="updateItemQty(${idx}, ${item.qty + 1})"
+                    class="w-7 h-7 flex items-center justify-center text-primary-500 font-bold hover:bg-white rounded-lg transition text-lg">+</button>
+          </div>
+          <span class="font-extrabold text-primary-500 text-sm">${formatRupiah(item.harga * item.qty)}</span>
+        </div>
+      </div>
+      <button onclick="removeItem(${idx})" class="text-gray-300 hover:text-red-500 transition p-1 flex-shrink-0" aria-label="Hapus">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+      </button>
+    </div>
+  `).join('');
+
+  const total = Cart.total();
+  document.getElementById('subtotal-display').textContent = formatRupiah(total);
+  document.getElementById('total-display').textContent = formatRupiah(total);
+}
+
+function updateItemQty(idx, qty) {
+  Cart.updateQty(idx, qty);
+  renderCart();
+}
+
+function removeItem(idx) {
+  Cart.remove(idx);
+  showToast('Item dihapus dari keranjang', 'info');
+  renderCart();
+}
+
+// Override Cart.save to re-render
+const origSave = Cart.save.bind(Cart);
+Cart.save = function(items) { origSave(items); renderCart(); };
+
+renderCart();
+</script>
+{% endblock %}
+
+{% block footer %}{% include "customer/footer.html" %}{% endblock %}

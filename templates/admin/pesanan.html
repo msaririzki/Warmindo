@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+{% block title %}Kelola Pesanan — WARMINDO Admin{% endblock %}
+
+{# current_page, store_open, pending_count come from route context #}
+
+{% block navbar %}{% include "admin/sidebar.html" %}{% endblock %}
+
+{% block content %}
+<div class="lg:ml-64 p-4 md:p-6 bg-gray-50 min-h-screen">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-extrabold text-charcoal flex items-center gap-2">
+      📋 Pesanan Online
+      {% if pending_count > 0 %}
+      <span class="bg-red-500 text-white text-sm font-extrabold px-2.5 py-0.5 rounded-full animate-pulse">{{ pending_count }} baru</span>
+      {% endif %}
+    </h1>
+    <button onclick="refreshOrders()" class="text-sm text-gray-500 hover:text-primary-500 flex items-center gap-1 transition">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      Refresh
+    </button>
+  </div>
+
+  <!-- Filter status -->
+  <div class="flex gap-2 mb-5 overflow-x-auto pb-1">
+    {% for val, label in [('semua','Semua'),('diproses','Diproses'),('siap','Siap'),('selesai','Selesai'),('batal','Batal')] %}
+    <a href="/admin/pesanan?status={{ val }}" data-status="{{ val }}"
+            class="status-filter-btn flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition
+                   {% if active_status == val %}bg-primary-500 text-white{% else %}bg-white text-gray-600 shadow-sm hover:bg-gray-50{% endif %}">
+      {{ label }}
+      <span class="{% if active_status == val %}bg-white/30 text-white{% else %}bg-gray-100 text-gray-600{% endif %} text-xs px-1.5 py-0.5 rounded-full font-bold">
+        {{ status_counts.get(val, 0) }}
+      </span>
+    </a>
+    {% endfor %}
+  </div>
+
+  <!-- Search Bar -->
+  <div class="mb-5">
+    <div class="relative">
+      <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+      </svg>
+      <input type="text" id="search-pesanan" placeholder="Cari kode pesanan atau nama customer..."
+             oninput="searchPesanan(this.value)"
+             class="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 shadow-sm"/>
+    </div>
+  </div>
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <!-- Desktop table -->
+    <div class="hidden md:block overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b border-gray-100">
+          <tr>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Kode</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Pelanggan</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Waktu</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Total</th>
+            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Status</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="order-table-body" class="divide-y divide-gray-50">
+          {% for p in pesanan_list %}
+          <tr class="order-row hover:bg-gray-50 transition" data-status="{{ p.status }}" data-kode="{{ p.kode_order|lower }}" data-nama="{{ (p.nama_customer or '')|lower }}">
+            <td class="px-5 py-4">
+              <div class="font-mono text-xs font-bold text-primary-600">{{ p.kode_order }}</div>
+              <div class="text-xs text-gray-400 mt-0.5">{{ 'Ambil' if p.metode_ambil == 'ambil' else 'Diantar' }}</div>
+            </td>
+            <td class="px-4 py-4">
+              <div class="font-semibold text-charcoal">{{ p.nama_customer or 'Walk-in' }}</div>
+              <div class="text-xs text-gray-400">{{ p.no_hp }}</div>
+            </td>
+            <td class="px-4 py-4 text-gray-500 text-xs">{{ p.waktu_order.strftime('%H:%M') if p.waktu_order else '' }}</td>
+            <td class="px-4 py-4 font-bold text-charcoal">Rp {{ '{:,}'.format(p.total_harga).replace(',','.') }}</td>
+            <td class="px-4 py-4 text-center">
+              <span class="badge-{{ p.status }} text-xs font-bold px-2.5 py-1 rounded-full">
+                {% if p.status == 'diproses' %}⏳ Diproses
+                {% elif p.status == 'siap' %}✅ Siap
+                {% elif p.status == 'selesai' %}🎉 Selesai
+                {% else %}❌ Batal{% endif %}
+              </span>
+            </td>
+            <td class="px-4 py-4 text-right">
+              <div class="flex items-center justify-end gap-2">
+                <button onclick="openDetailOrderFromEl(this)"
+                        data-pesanan-id="{{ p.id }}"
+                        class="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition text-xs font-semibold">Detail</button>
+                {% if p.status == 'diproses' %}
+                <button onclick="updateStatusFromEl(this, 'siap')"
+                        data-pesanan-id="{{ p.id }}"
+                        class="bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1.5 rounded-lg transition text-xs font-semibold">→ Siap</button>
+                {% elif p.status == 'siap' %}
+                <button onclick="updateStatusFromEl(this, 'selesai')"
+                        data-pesanan-id="{{ p.id }}"
+                        class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-lg transition text-xs font-semibold">→ Selesai</button>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="px-5 py-10 text-center text-gray-400">Tidak ada pesanan</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Mobile cards -->
+    <div class="md:hidden divide-y divide-gray-100" id="order-cards-mobile">
+      {% for kode, nama, nohp, waktu, total, status, ambil in dummy_orders %}
+      <div class="order-row p-4" data-status="{{ status }}">
+        <div class="flex items-start justify-between mb-2">
+          <div>
+            <div class="font-mono text-xs font-bold text-primary-600">{{ kode }}</div>
+            <div class="font-semibold text-charcoal text-sm">{{ nama }}</div>
+            <div class="text-xs text-gray-400">{{ waktu }} · {{ 'Ambil' if ambil == 'ambil' else 'Diantar' }}</div>
+          </div>
+          <span class="badge-{{ status }} text-xs font-bold px-2.5 py-1 rounded-full">
+            {% if status == 'diproses' %}Diproses{% elif status == 'siap' %}Siap{% elif status == 'selesai' %}Selesai{% else %}Batal{% endif %}
+          </span>
+        </div>
+        <div class="flex items-center justify-between mt-3">
+          <span class="font-bold text-charcoal">Rp {{ '{:,}'.format(total).replace(',','.') }}</span>
+          <div class="flex gap-2">
+            <button onclick="openDetailOrder('{{ kode }}')" class="text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg text-xs font-semibold">Detail</button>
+            {% if status == 'diproses' %}
+            <button onclick="updateStatus('{{ kode }}', 'siap', this)" class="bg-green-100 text-green-700 px-3 py-1.5 rounded-lg text-xs font-semibold">→ Siap</button>
+            {% elif status == 'siap' %}
+            <button onclick="updateStatus('{{ kode }}', 'selesai', this)" class="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-xs font-semibold">→ Selesai</button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Modal Detail Order -->
+<div id="modal-detail-order" class="modal-overlay fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+  <div class="modal-box bg-white w-full max-w-md rounded-3xl overflow-hidden scale-95 opacity-0 transition-all">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+      <h3 id="detail-kode" class="font-extrabold text-charcoal text-lg"></h3>
+      <button onclick="closeModal('modal-detail-order')" class="text-gray-400 hover:text-gray-600 transition text-xl">✕</button>
+    </div>
+    <div class="p-6">
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between"><span class="text-gray-500">Nama</span><span class="font-semibold" id="d-nama"></span></div>
+        <div class="flex justify-between"><span class="text-gray-500">No HP</span><span class="font-semibold" id="d-hp"></span></div>
+        <div class="flex justify-between"><span class="text-gray-500">Pengambilan</span><span class="font-semibold" id="d-ambil"></span></div>
+        <div class="flex justify-between"><span class="text-gray-500">Pembayaran</span><span class="font-semibold" id="d-bayar"></span></div>
+        <div class="flex justify-between"><span class="text-gray-500">Catatan</span><span class="font-semibold" id="d-catatan"></span></div>
+      </div>
+      <div class="border-t border-gray-100 my-4"></div>
+      <div id="d-items" class="space-y-1 text-sm mb-4"></div>
+      <div class="flex justify-between font-extrabold text-charcoal">
+        <span>Total</span>
+        <span id="d-total" class="text-primary-500 text-xl"></span>
+      </div>
+    </div>
+    <div class="px-6 pb-6">
+      <a id="d-wa-link" href="#" target="_blank"
+         class="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl transition text-sm">
+        📱 Hubungi via WhatsApp
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function filterStatus(status) {
+  document.querySelectorAll('.status-filter-btn').forEach(btn => {
+    const active = btn.dataset.status === status;
+    btn.classList.toggle('bg-primary-500', active);
+    btn.classList.toggle('text-white', active);
+    btn.classList.toggle('bg-white', !active);
+    btn.classList.toggle('text-gray-600', !active);
+  });
+  document.querySelectorAll('.order-row').forEach(row => {
+    const match = status === 'semua' || row.dataset.status === status;
+    row.style.display = match ? '' : 'none';
+  });
+}
+
+function updateStatusFromEl(btn, newStatus) {
+  const id = btn.dataset.pesananId;
+  updateStatus(id, newStatus, btn);
+}
+
+function openDetailOrderFromEl(btn) {
+  const id = btn.dataset.pesananId;
+  openDetailOrder(id);
+}
+
+function updateStatus(pesananId, newStatus, btn) {
+  btn.disabled = true;
+  btn.textContent = '...';
+  fetch(`/admin/pesanan/${pesananId}/status`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: newStatus }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      showToast(`Status diubah ke "${newStatus}"`, 'success');
+      btn.closest('.order-row').dataset.status = newStatus;
+      btn.remove();
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'Retry';
+    }
+  })
+  .catch(() => { btn.disabled = false; btn.textContent = 'Error'; });
+}
+
+function openDetailOrder(pesananId) {
+  fetch(`/admin/pesanan/${pesananId}/detail`)
+  .then(r => r.json())
+  .then(d => {
+    document.getElementById('detail-kode').textContent = d.kode_order;
+    document.getElementById('d-nama').textContent = d.nama || '—';
+    document.getElementById('d-hp').textContent = d.hp || '—';
+    document.getElementById('d-ambil').textContent = d.ambil;
+    document.getElementById('d-bayar').textContent = d.bayar;
+    document.getElementById('d-catatan').textContent = d.catatan || '—';
+    document.getElementById('d-total').textContent = formatRupiah(d.total);
+    document.getElementById('d-items').innerHTML = d.items.map(i =>
+      `<div class="flex justify-between"><span>${i.nama}${i.varian ? ' (' + i.varian + ')' : ''} ×${i.qty}</span><span class="font-semibold">${formatRupiah(i.subtotal)}</span></div>`
+    ).join('');
+    document.getElementById('d-wa-link').href = `https://wa.me/${d.hp}?text=Halo+kak+${d.nama},+pesanan+kode+${d.kode_order}+sudah+siap!`;
+    openModal('modal-detail-order');
+  })
+  .catch(() => showToast('Gagal memuat detail', 'error'));
+}
+
+function searchPesanan(query) {
+  const q = query.toLowerCase().trim();
+  document.querySelectorAll('.order-row').forEach(row => {
+    if (!q) { row.style.display = ''; return; }
+    const kode = row.dataset.kode || '';
+    const nama = row.dataset.nama || '';
+    const match = kode.includes(q) || nama.includes(q);
+    row.style.display = match ? '' : 'none';
+  });
+}
+
+function refreshOrders() {
+  showToast('Data pesanan diperbarui!', 'info');
+  // TODO: fetch('/api/pesanan').then(...)
+}
+</script>
+{% endblock %}

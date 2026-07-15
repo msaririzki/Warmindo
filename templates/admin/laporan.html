@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}Laporan Penjualan — WARMINDO Admin{% endblock %}
+
+{# current_page, store_open, pending_count come from route context #}
+
+{% block navbar %}{% include "admin/sidebar.html" %}{% endblock %}
+
+{% block content %}
+<div class="lg:ml-64 p-4 md:p-6 bg-gray-50 min-h-screen">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-extrabold text-charcoal">📊 Laporan Penjualan</h1>
+    <button onclick="downloadReport()" class="bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 font-semibold px-4 py-2 rounded-xl text-sm flex items-center gap-2 transition shadow-sm">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+      Export
+    </button>
+  </div>
+
+  <!-- Filter Periode -->
+  <div class="bg-white rounded-2xl shadow-sm p-4 mb-6 flex flex-wrap gap-2 items-center">
+    <span class="text-sm font-semibold text-gray-600 mr-2">Periode:</span>
+    {% for val, label in [('hari','Hari Ini'),('minggu','Minggu Ini'),('bulan','Bulan Ini'),('custom','Custom')] %}
+    <button onclick="setPeriode('{{ val }}')" data-periode="{{ val }}"
+            class="periode-btn px-4 py-2 rounded-xl text-sm font-semibold transition
+                   {% if loop.first %}bg-primary-500 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-gray-200{% endif %}">
+      {{ label }}
+    </button>
+    {% endfor %}
+    <!-- Custom date range -->
+    <div id="custom-range" class="hidden flex items-center gap-2 ml-2">
+      <input type="date" id="date-from" class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"/>
+      <span class="text-gray-400 text-sm">—</span>
+      <input type="date" id="date-to" class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"/>
+      <button onclick="applyCustomRange()" class="bg-primary-500 text-white px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-primary-600 transition">Terapkan</button>
+    </div>
+  </div>
+
+  <!-- Summary cards -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    {% set summary_stats = [
+      ('💰','Total Omzet','Rp ' ~ '{:,}'.format(total_omzet).replace(',','.'),'bg-gradient-to-br from-primary-500 to-primary-700'),
+      ('📋','Total Transaksi',total_transaksi|string,'bg-gradient-to-br from-blue-500 to-blue-700'),
+      ('📈','Rata-rata/Transaksi','Rp ' ~ '{:,}'.format(rata_rata).replace(',','.'),'bg-gradient-to-br from-green-500 to-green-700'),
+      ('🏆','Menu Terlaris', top_menu_nama,'bg-gradient-to-br from-warm-500 to-warm-700'),
+    ] %}
+    {% for icon, label, val, grad in summary_stats %}
+    <div class="{{ grad }} rounded-2xl p-5 text-white shadow-md">
+      <div class="text-3xl mb-2">{{ icon }}</div>
+      <div class="text-xs font-semibold opacity-80 mb-1">{{ label }}</div>
+      <div class="text-xl font-extrabold leading-tight">{{ val }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="grid lg:grid-cols-5 gap-5">
+    <!-- Bar Chart Omzet -->
+    <div class="lg:col-span-3 bg-white rounded-2xl shadow-sm p-5">
+      <h2 class="font-extrabold text-charcoal mb-4">Omzet per Hari</h2>
+      <div class="flex items-end justify-around gap-2 h-48">
+        {% for d in omzet_harian %}
+        {% set max_val = omzet_harian | map(attribute='omzet') | max or 1 %}
+        {% set pct = ((d.omzet / max_val) * 100) | round | int %}
+        <div class="flex flex-col items-center gap-1 flex-1">
+          <div class="text-xs text-gray-500 font-semibold">Rp {{ '{:,}'.format(d.omzet).replace(',','.') if d.omzet else '0' }}</div>
+          <div class="w-full bg-gray-100 rounded-t-lg overflow-hidden" style="height:120px">
+            <div class="chart-bar bg-gradient-to-t from-primary-600 to-primary-400 rounded-t-lg w-full"
+                 data-pct="{{ pct }}"></div>
+          </div>
+          <div class="text-xs text-gray-500 font-medium">{{ d.tanggal }}</div>
+        </div>
+        {% else %}
+        <div class="text-gray-400 text-sm flex items-center justify-center w-full">Belum ada data</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Menu Terlaris -->
+    <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm p-5">
+      <h2 class="font-extrabold text-charcoal mb-4">🏆 Menu Terlaris</h2>
+      <div class="space-y-3">
+        {% set top_max = top_menu[0].terjual if top_menu else 1 %}
+        {% for m in top_menu %}
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="font-semibold text-charcoal">{{ m.nama }}</span>
+            <span class="text-gray-500 font-medium">{{ m.terjual }}x</span>
+          </div>
+          <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div class="h-full rounded-full transition-all"
+                 data-width="{{ m.pct }}" data-color="#e84a0c"></div>
+          </div>
+        </div>
+        {% else %}
+        <div class="text-gray-400 text-sm">Belum ada data</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabel Rincian -->
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden mt-5">
+    <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+      <h2 class="font-extrabold text-charcoal">Rincian Transaksi</h2>
+      <span class="text-gray-400 text-sm">Menampilkan 10 terakhir</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Tanggal/Waktu</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Kode</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Sumber</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Total</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for p in pesanan_list %}
+          <tr class="hover:bg-gray-50 transition">
+            <td class="px-5 py-3 text-gray-500 text-xs">{{ p.waktu_order.strftime('%d %b, %H:%M') if p.waktu_order else '' }}</td>
+            <td class="px-4 py-3 font-mono text-xs font-bold text-primary-600">{{ p.kode_order }}</td>
+            <td class="px-4 py-3">
+              <span class="{% if p.sumber == 'online' %}bg-blue-100 text-blue-700{% else %}bg-green-100 text-green-700{% endif %} text-xs font-semibold px-2 py-0.5 rounded-full">
+                {{ p.sumber | capitalize }}
+              </span>
+            </td>
+            <td class="px-4 py-3 font-bold text-charcoal text-right">Rp {{ '{:,}'.format(p.total_harga).replace(',','.') }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="px-5 py-8 text-center text-gray-400">Belum ada transaksi dalam periode ini</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Current active period (from Flask context)
+let activePeriode = '{{ periode }}';
+
+function setPeriode(val) {
+  if (val === 'custom') {
+    // Show custom date range inputs
+    document.querySelectorAll('.periode-btn').forEach(b => {
+      const active = b.dataset.periode === val;
+      b.classList.toggle('bg-primary-500', active);
+      b.classList.toggle('text-white', active);
+      b.classList.toggle('bg-gray-100', !active);
+      b.classList.toggle('text-gray-600', !active);
+    });
+    document.getElementById('custom-range').classList.remove('hidden');
+    activePeriode = 'custom';
+    return;
+  }
+  // Navigate to server with new periode
+  window.location.href = `/admin/laporan?periode=${val}`;
+}
+
+function applyCustomRange() {
+  const from = document.getElementById('date-from').value;
+  const to = document.getElementById('date-to').value;
+  if (!from || !to) { showToast('Pilih tanggal lengkap!', 'warning'); return; }
+  window.location.href = `/admin/laporan?periode=custom&from=${from}&to=${to}`;
+}
+
+function downloadReport() {
+  // Build export URL with same filter params
+  let url = '/admin/laporan/export?periode=' + activePeriode;
+  if (activePeriode === 'custom') {
+    const from = document.getElementById('date-from').value || '{{ date_from }}';
+    const to = document.getElementById('date-to').value || '{{ date_to }}';
+    url += `&from=${from}&to=${to}`;
+  }
+  showToast('Mengunduh laporan CSV...', 'success');
+  window.location.href = url;
+}
+
+// Activate correct period button on page load
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.periode-btn').forEach(b => {
+    const active = b.dataset.periode === activePeriode;
+    b.classList.toggle('bg-primary-500', active);
+    b.classList.toggle('text-white', active);
+    b.classList.toggle('bg-gray-100', !active);
+    b.classList.toggle('text-gray-600', !active);
+  });
+  if (activePeriode === 'custom') {
+    document.getElementById('custom-range').classList.remove('hidden');
+    document.getElementById('date-from').value = '{{ date_from }}';
+    document.getElementById('date-to').value = '{{ date_to }}';
+  }
+
+  // Chart bar: animasi masuk dari bawah
+  document.querySelectorAll('.chart-bar').forEach((bar, i) => {
+    const pct = parseInt(bar.dataset.pct) || 0;
+    bar.style.height = '0%';
+    bar.style.marginTop = '100%';
+    setTimeout(() => {
+      bar.style.transition = 'height 0.6s cubic-bezier(.34,1.56,.64,1), margin-top 0.6s cubic-bezier(.34,1.56,.64,1)';
+      bar.style.height = pct + '%';
+      bar.style.marginTop = (100 - pct) + '%';
+    }, 100 + i * 80);
+  });
+
+  // Progress bar menu terlaris
+  document.querySelectorAll('[data-width][data-color]').forEach(el => {
+    const width = el.dataset.width || '0';
+    const color = el.dataset.color || '#e84a0c';
+    setTimeout(() => {
+      el.style.transition = 'width 0.8s cubic-bezier(.34,1.56,.64,1)';
+      el.style.width = width + '%';
+      el.style.background = color;
+    }, 400);
+  });
+
+});
+</script>
+{% endblock %}

@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — WARMINDO Admin{% endblock %}
+
+{# These are set from route context, not hardcoded #}
+
+{% block navbar %}{% include "admin/sidebar.html" %}{% endblock %}
+
+{% block content %}
+<div class="lg:ml-64 p-4 md:p-6 min-h-screen bg-gray-50">
+
+  <!-- Page header -->
+  <div class="mb-6">
+    <h1 class="text-2xl font-extrabold text-charcoal">Selamat datang, Admin! 👋</h1>
+    <p class="text-gray-500 text-sm mt-1" id="dashboard-time">Memuat waktu...</p>
+  </div>
+
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    {% set stats = [
+      ('💰', 'Omzet Hari Ini', 'Rp ' ~ '{:,}'.format(omzet_hari_ini).replace(',','.'), '', 'from-primary-500 to-primary-700'),
+      ('📋', 'Pesanan Masuk', total_pesanan|string, 'Total hari ini', 'from-blue-500 to-blue-700'),
+      ('⏳', 'Perlu Diproses', pesanan_diproses|string, 'Segera tangani!', 'from-yellow-500 to-orange-500'),
+      ('✅', 'Selesai', pesanan_selesai|string, 'Transaksi lunas', 'from-green-500 to-green-700'),
+    ] %}
+    {% for icon, label, value, sub, grad in stats %}
+    <div class="bg-gradient-to-br {{ grad }} rounded-2xl p-5 text-white shadow-md">
+      <div class="text-3xl mb-2">{{ icon }}</div>
+      <div class="text-xs font-semibold opacity-80 mb-1">{{ label }}</div>
+      <div class="text-2xl md:text-3xl font-extrabold leading-tight">{{ value }}</div>
+      <div class="text-xs opacity-70 mt-1">{{ sub }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="grid lg:grid-cols-3 gap-5 mb-6">
+    <!-- Pesanan terbaru -->
+    <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <h2 class="font-extrabold text-charcoal">Pesanan Terbaru</h2>
+        <a href="/admin/pesanan" class="text-primary-500 text-sm font-semibold hover:underline">Lihat semua →</a>
+      </div>
+      <div class="divide-y divide-gray-50">
+        {% for p in pesanan_terbaru %}
+        <div class="px-5 py-3.5 flex items-center gap-4 hover:bg-gray-50 transition">
+          <div class="font-mono text-xs text-gray-500 w-20 flex-shrink-0">{{ p.kode_order }}</div>
+          <div class="flex-1 min-w-0">
+            <div class="font-semibold text-charcoal text-sm truncate">{{ p.nama_customer or 'Walk-in' }}</div>
+            <div class="text-gray-400 text-xs">{{ p.waktu_order.strftime('%H:%M') if p.waktu_order else '' }}</div>
+          </div>
+          <div class="text-sm font-bold text-charcoal flex-shrink-0">Rp {{ '{:,}'.format(p.total_harga).replace(',','.') }}</div>
+          <span class="badge-{{ p.status }} text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0">
+            {% if p.status == 'diproses' %}Diproses
+            {% elif p.status == 'siap' %}Siap
+            {% elif p.status == 'selesai' %}Selesai
+            {% else %}Batal{% endif %}
+          </span>
+        </div>
+        {% else %}
+        <div class="px-5 py-6 text-center text-gray-400 text-sm">Belum ada pesanan hari ini</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Sidebar kanan -->
+    <div class="space-y-5">
+      <!-- Alert stok menipis -->
+      <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
+          <span class="text-lg">⚠️</span>
+          <h2 class="font-extrabold text-charcoal">Stok Menipis</h2>
+        </div>
+        <div class="divide-y divide-gray-50">
+          {% for m in stok_menipis %}
+          <div class="px-5 py-3 flex items-center justify-between">
+            <span class="text-sm text-charcoal">{{ m.nama }}</span>
+            <span class="{% if m.stok <= 3 %}bg-red-100 text-red-600{% else %}bg-yellow-100 text-yellow-700{% endif %} text-xs font-bold px-2 py-0.5 rounded-full">
+              Sisa {{ m.stok }}
+            </span>
+          </div>
+          {% else %}
+          <div class="px-5 py-3 text-gray-400 text-sm text-center">Semua stok aman 👍</div>
+          {% endfor %}
+        </div>
+        <div class="px-5 py-3">
+          <a href="/admin/menu" class="text-primary-500 text-sm font-semibold hover:underline">Kelola menu →</a>
+        </div>
+      </div>
+
+      <!-- Quick links -->
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <h2 class="font-extrabold text-charcoal mb-4">Akses Cepat</h2>
+        <div class="grid grid-cols-2 gap-3">
+          <a href="/admin/kasir" class="flex flex-col items-center gap-2 bg-primary-50 hover:bg-primary-100 text-primary-700 rounded-xl p-4 transition text-center">
+            <span class="text-3xl">🛒</span>
+            <span class="text-xs font-bold">Mode Kasir</span>
+          </a>
+          <a href="/admin/pesanan" class="flex flex-col items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl p-4 transition text-center relative">
+            <span class="text-3xl">📋</span>
+            <span class="text-xs font-bold">Pesanan</span>
+            {% if pending_count > 0 %}
+            <span class="absolute top-2 right-2 bg-red-500 text-white text-xs font-extrabold w-5 h-5 rounded-full flex items-center justify-center">{{ pending_count }}</span>
+            {% endif %}
+          </a>
+          {% if current_user and current_user.role == 'owner' %}
+          <a href="/admin/laporan" class="flex flex-col items-center gap-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-xl p-4 transition text-center">
+            <span class="text-3xl">📊</span>
+            <span class="text-xs font-bold">Laporan</span>
+          </a>
+          <a href="/admin/pengaturan" class="flex flex-col items-center gap-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl p-4 transition text-center">
+            <span class="text-3xl">⚙️</span>
+            <span class="text-xs font-bold">Pengaturan</span>
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grafik Omzet 7 Hari Terakhir -->
+  <div class="bg-white rounded-2xl shadow-sm p-5 mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-extrabold text-charcoal flex items-center gap-2">
+        📈 Omzet 7 Hari Terakhir
+      </h2>
+      {% if current_user and current_user.role == 'owner' %}
+      <a href="/admin/laporan" class="text-primary-500 text-sm font-semibold hover:underline">Lihat laporan lengkap →</a>
+      {% endif %}
+    </div>
+    <div class="relative" style="height: 280px;">
+      <canvas id="omzetChart"></canvas>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Live clock
+function updateTime() {
+  const now = new Date();
+  const opts = { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' };
+  const el = document.getElementById('dashboard-time');
+  if (el) el.textContent = now.toLocaleDateString('id-ID', opts);
+}
+updateTime();
+setInterval(updateTime, 30000);
+
+// Chart.js — Omzet 7 hari terakhir
+const chartLabels = {{ chart_labels | tojson }};
+const chartData = {{ chart_data | tojson }};
+
+const ctx = document.getElementById('omzetChart')?.getContext('2d');
+if (ctx) {
+  const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+  gradient.addColorStop(0, 'rgba(232, 74, 12, 0.3)');
+  gradient.addColorStop(1, 'rgba(232, 74, 12, 0.02)');
+
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: chartLabels,
+      datasets: [{
+        label: 'Omzet (Rp)',
+        data: chartData,
+        borderColor: '#e84a0c',
+        backgroundColor: gradient,
+        borderWidth: 3,
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: '#e84a0c',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#2C2C2C',
+          titleFont: { family: 'Plus Jakarta Sans', weight: '700' },
+          bodyFont: { family: 'Plus Jakarta Sans' },
+          cornerRadius: 12,
+          padding: 12,
+          callbacks: {
+            label: function(context) {
+              return 'Rp ' + context.parsed.y.toLocaleString('id-ID');
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: 'rgba(0,0,0,0.04)' },
+          ticks: {
+            font: { family: 'Plus Jakarta Sans', size: 11 },
+            callback: function(value) {
+              if (value >= 1000000) return 'Rp ' + (value/1000000).toFixed(1) + 'jt';
+              if (value >= 1000) return 'Rp ' + (value/1000) + 'rb';
+              return 'Rp ' + value;
+            }
+          }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { font: { family: 'Plus Jakarta Sans', size: 11, weight: '600' } }
+        }
+      }
+    }
+  });
+}
+</script>
+{% endblock %}

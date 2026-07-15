@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% block title %}Pengaturan Toko — WARMINDO Admin{% endblock %}
+
+{% block navbar %}{% include "admin/sidebar.html" %}{% endblock %}
+
+{% block content %}
+{% set toko = pengaturan_toko %}
+<div class="lg:ml-64 p-4 md:p-6 bg-gray-50 min-h-screen">
+
+  <!-- Page Header -->
+  <div class="mb-6 flex items-center gap-4">
+    <div class="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center text-2xl shadow-lg">⚙️</div>
+    <div>
+      <h1 class="text-2xl font-extrabold text-charcoal">Pengaturan Toko</h1>
+      <p class="text-gray-500 text-sm mt-0.5">Atur jam, kontak, foto, dan keamanan akun</p>
+    </div>
+  </div>
+
+  <!-- Flash messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for cat, msg in messages %}
+      <div class="mb-4 px-5 py-3 rounded-xl text-sm font-semibold
+        {% if cat == 'success' %}bg-green-100 text-green-800 border border-green-200
+        {% elif cat == 'error' %}bg-red-100 text-red-800 border border-red-200
+        {% else %}bg-blue-100 text-blue-800 border border-blue-200{% endif %}">
+        {{ '✅' if cat == 'success' else ('❌' if cat == 'error' else 'ℹ️') }} {{ msg }}
+      </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <div class="grid lg:grid-cols-2 gap-5">
+
+    <!-- ═══ Status & Jam ═══ -->
+    <div class="bg-white rounded-3xl shadow-sm p-6 border border-gray-100">
+      <div class="flex items-center gap-3 mb-5">
+        <div class="w-10 h-10 bg-orange-100 rounded-2xl flex items-center justify-center text-xl">🕐</div>
+        <h2 class="font-extrabold text-charcoal text-lg">Status & Jam Operasional</h2>
+      </div>
+
+      <!-- Toggle -->
+      <div class="flex items-center justify-between p-4 rounded-2xl mb-5
+           {% if toko.status_buka %}bg-green-50 border border-green-200{% else %}bg-red-50 border border-red-200{% endif %}">
+        <div>
+          <div class="font-semibold text-charcoal">Status Toko</div>
+          <div class="text-xs text-gray-500 mt-0.5">Toggle buka/tutup manual</div>
+        </div>
+        <div class="flex items-center gap-3">
+          <span id="status-label" class="text-sm font-extrabold {{ 'text-green-600' if toko.status_buka else 'text-red-500' }}">
+            {{ 'BUKA' if toko.status_buka else 'TUTUP' }}
+          </span>
+          <button onclick="toggleStoreStatus(this)" data-open="{{ 'true' if toko.status_buka else 'false' }}"
+                  id="toggle-store-btn"
+                  class="relative inline-flex h-7 w-14 items-center rounded-full transition-colors
+                         {{ 'bg-green-500' if toko.status_buka else 'bg-gray-300' }}"
+                  role="switch">
+            <span id="toggle-knob" class="inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform
+                         {{ 'translate-x-8' if toko.status_buka else 'translate-x-1' }}"></span>
+          </button>
+        </div>
+      </div>
+
+      <form action="/admin/pengaturan" method="POST" class="space-y-4">
+        <input type="hidden" name="action" value="jam"/>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">⏰ Jam Buka</label>
+            <input type="time" name="jam_buka" value="{{ toko.jam_buka }}"
+                   class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"/>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">⏰ Jam Tutup</label>
+            <input type="time" name="jam_tutup" value="{{ toko.jam_tutup }}"
+                   class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"/>
+          </div>
+        </div>
+        <p class="text-xs text-gray-400">Buka/tutup otomatis mengikuti jadwal, kecuali override aktif.</p>
+        <button type="submit"
+                class="bg-primary-500 hover:bg-primary-600 text-white font-bold px-6 py-2.5 rounded-xl transition text-sm shadow-md">
+          💾 Simpan Jadwal
+        </button>
+      </form>
+    </div>
+
+    <!-- ═══ Foto Toko ═══ -->
+    <div class="bg-white rounded-3xl shadow-sm p-6 border border-gray-100">
+      <div class="flex items-center gap-3 mb-5">
+        <div class="w-10 h-10 bg-purple-100 rounded-2xl flex items-center justify-center text-xl">🖼️</div>
+        <h2 class="font-extrabold text-charcoal text-lg">Foto Profil Toko</h2>
+      </div>
+      <form action="/admin/pengaturan" method="POST" enctype="multipart/form-data" class="flex flex-col items-center gap-4">
+        <input type="hidden" name="action" value="foto"/>
+        <div class="relative group">
+          <img id="foto-toko-preview"
+               src="{% if toko.foto_toko %}/static/{{ toko.foto_toko }}{% else %}data:image/svg+xml,{{ '<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"160\"><rect width=\"160\" height=\"160\" rx=\"16\" fill=\"%23e84a0c\"/><text x=\"50%\" y=\"55%\" dominant-baseline=\"middle\" text-anchor=\"middle\" fill=\"white\" font-size=\"60\">🍜</text></svg>'|urlencode }}{% endif %}"
+               alt="Foto Toko"
+               class="w-36 h-36 rounded-2xl object-cover border-4 border-primary-100 shadow-lg"/>
+          <label class="absolute bottom-0 right-0 bg-primary-500 text-white w-9 h-9 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:bg-primary-600 transition group-hover:scale-110">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            <input type="file" name="foto_toko" accept="image/jpeg,image/png,image/webp"
+                   class="sr-only" onchange="previewFotoToko(event)"/>
+          </label>
+        </div>
+        <div class="text-center">
+          <p id="foto-filename" class="text-xs text-gray-400">JPG/PNG/WEBP · Maks 2MB</p>
+          <p class="text-xs text-gray-400 mt-0.5">Foto tampil di halaman utama website</p>
+        </div>
+        <button type="submit"
+                class="bg-purple-500 hover:bg-purple-600 text-white font-bold px-6 py-2.5 rounded-xl transition text-sm shadow-md">
+          📤 Upload Foto Toko
+        </button>
+      </form>
+    </div>
+
+    <!-- ═══ Kontak & Lokasi ═══ -->
+    <div class="bg-white rounded-3xl shadow-sm p-6 border border-gray-100 lg:col-span-2">
+      <div class="flex items-center gap-3 mb-5">
+        <div class="w-10 h-10 bg-green-100 rounded-2xl flex items-center justify-center text-xl">📞</div>
+        <h2 class="font-extrabold text-charcoal text-lg">Info Kontak & Lokasi</h2>
+      </div>
+      <form action="/admin/pengaturan" method="POST" class="space-y-4">
+        <input type="hidden" name="action" value="kontak"/>
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">📱 No. WhatsApp</label>
+            <div class="relative">
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">+</span>
+              <input type="tel" name="no_wa" value="{{ toko.no_wa }}" placeholder="628xxxxxxxxxx"
+                     class="w-full pl-8 pr-4 border border-gray-200 rounded-xl py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"/>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">Format: <code class="bg-gray-100 px-1 rounded">6287715811122</code> (tanpa tanda +)</p>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">🗺️ Link Google Maps</label>
+            <input type="url" name="link_maps" value="{{ toko.link_maps }}" placeholder="https://maps.google.com/..."
+                   class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"/>
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">📍 Alamat Lengkap</label>
+            <textarea name="alamat" rows="2"
+                      class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 resize-none">{{ toko.alamat }}</textarea>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <button type="submit"
+                  class="bg-primary-500 hover:bg-primary-600 text-white font-bold px-6 py-2.5 rounded-xl transition text-sm shadow-md">
+            💾 Simpan Kontak
+          </button>
+          <a href="https://wa.me/{{ toko.no_wa }}" target="_blank"
+             class="flex items-center gap-2 text-sm text-green-600 font-semibold hover:underline">
+            <span>💬</span> Tes WA Link
+          </a>
+        </div>
+      </form>
+    </div>
+
+    <!-- ═══ Ganti Password ═══ -->
+    <div class="bg-white rounded-3xl shadow-sm p-6 border border-gray-100 lg:col-span-2">
+      <div class="flex items-center gap-3 mb-5">
+        <div class="w-10 h-10 bg-red-100 rounded-2xl flex items-center justify-center text-xl">🔒</div>
+        <h2 class="font-extrabold text-charcoal text-lg">Ganti Password Admin</h2>
+      </div>
+      <form action="/admin/pengaturan" method="POST" class="space-y-4 max-w-md" id="form-password">
+        <input type="hidden" name="action" value="password"/>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Password Lama</label>
+          <input type="password" name="old_pass" required placeholder="••••••••"
+                 class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"/>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Password Baru</label>
+          <input type="password" name="new_pass" id="pw-new" required placeholder="Min. 6 karakter"
+                 class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"/>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Konfirmasi Password</label>
+          <input type="password" name="confirm_pass" id="pw-confirm" required placeholder="Ulangi password baru"
+                 class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                 oninput="checkPwMatch()"/>
+          <p id="pw-match" class="text-xs mt-1 hidden"></p>
+        </div>
+        <button type="submit"
+                class="bg-charcoal hover:bg-gray-800 text-white font-bold px-6 py-2.5 rounded-xl transition text-sm">
+          🔑 Ganti Password
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toggleStoreStatus(btn) {
+  const isOpen = btn.dataset.open === 'true';
+  const newState = !isOpen;
+  fetch('/admin/pengaturan/toggle-status', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status_buka: newState }),
+  })
+  .then(r => r.json())
+  .then(() => {
+    btn.dataset.open = newState.toString();
+    const knob = document.getElementById('toggle-knob');
+    const label = document.getElementById('status-label');
+    btn.classList.toggle('bg-green-500', newState);
+    btn.classList.toggle('bg-gray-300', !newState);
+    knob.classList.toggle('translate-x-8', newState);
+    knob.classList.toggle('translate-x-1', !newState);
+    label.textContent = newState ? 'BUKA' : 'TUTUP';
+    label.className = `text-sm font-extrabold ${newState ? 'text-green-600' : 'text-red-500'}`;
+    showToast(`Toko sekarang ${newState ? 'BUKA 🎉' : 'TUTUP'}`, newState ? 'success' : 'info');
+  })
+  .catch(() => showToast('Gagal update status', 'error'));
+}
+
+function previewFotoToko(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const TYPES = ['image/jpeg','image/png','image/webp'];
+  if (!TYPES.includes(file.type)) {
+    showToast('Format tidak didukung. Gunakan JPG/PNG/WEBP', 'error');
+    e.target.value = ''; return;
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    showToast('Ukuran file melebihi 2 MB!', 'error');
+    e.target.value = ''; return;
+  }
+  document.getElementById('foto-toko-preview').src = URL.createObjectURL(file);
+  document.getElementById('foto-filename').textContent = `✅ ${file.name}`;
+}
+
+function checkPwMatch() {
+  const n = document.getElementById('pw-new').value;
+  const c = document.getElementById('pw-confirm').value;
+  const el = document.getElementById('pw-match');
+  if (!c) { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  if (n === c) {
+    el.textContent = '✅ Password cocok';
+    el.className = 'text-xs mt-1 text-green-600';
+  } else {
+    el.textContent = '❌ Password tidak cocok';
+    el.className = 'text-xs mt-1 text-red-500';
+  }
+}
+
+document.getElementById('form-password').onsubmit = function(e) {
+  const n = document.getElementById('pw-new').value;
+  const c = document.getElementById('pw-confirm').value;
+  if (n !== c) { e.preventDefault(); showToast('Password baru tidak cocok!', 'error'); }
+};
+</script>
+{% endblock %}

@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% block title %}WARMINDO — Mie Instan & Nasi Enak{% endblock %}
+{% block meta_description %}WARMINDO, warung mie instan dan nasi favorit. Order online, ambil di tempat atau
+diantar!{% endblock %}
+
+{% block navbar %}
+{% include "customer/navbar.html" %}
+{% endblock %}
+
+{% block content %}
+<!-- ===== HERO SECTION ===== -->
+<section class="hero-gradient relative overflow-hidden min-h-[92vh] flex items-center">
+  <div
+    class="absolute top-0 right-0 w-96 h-96 bg-primary-500 rounded-full opacity-10 blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none">
+  </div>
+  <div
+    class="absolute bottom-0 left-0 w-72 h-72 bg-warm-400 rounded-full opacity-10 blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none">
+  </div>
+
+  <div class="container mx-auto px-4 py-16 relative z-10">
+    <div class="flex flex-col lg:flex-row items-center gap-12">
+      <!-- Left: Text -->
+      <div class="flex-1 text-center lg:text-left">
+        <div class="flex justify-center lg:justify-start mb-5">
+          <div id="store-status"></div>
+        </div>
+        <div
+          class="inline-block bg-warm-500/20 text-warm-300 text-xs font-semibold px-3 py-1 rounded-full border border-warm-500/30 mb-4 uppercase tracking-wider">
+          🍜 Warmindo Sejak 2018
+        </div>
+        <h1 class="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white leading-tight mb-4">
+          Warung
+          <span class="text-transparent bg-clip-text bg-gradient-to-r from-warm-300 to-primary-400">Warmindo</span>
+        </h1>
+        <p class="text-lg md:text-xl text-gray-300 mb-8 max-w-lg mx-auto lg:mx-0 leading-relaxed">
+          Mie instan & nasi lezat dengan <span class="text-warm-300 font-semibold">harga bersahabat</span>.
+          Siap saji, siap mengenyangkan — kapan pun kamu lapar!
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+          <a href="/menu" id="cta-lihat-menu"
+            class="inline-flex items-center justify-center gap-2 bg-primary-500 hover:bg-primary-600 text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl hover:-translate-y-0.5 text-lg">
+            🍜 Lihat Menu
+          </a>
+          <a href="/menu" id="cta-order"
+            class="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white font-semibold px-8 py-4 rounded-2xl transition-all duration-200 border border-white/20 text-lg backdrop-blur-sm">
+            🛒 Pesan Sekarang
+          </a>
+        </div>
+        <!-- Stats -->
+        <div class="flex justify-center lg:justify-start gap-8 mt-10">
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-warm-300">500+</div>
+            <div class="text-gray-400 text-sm">Pelanggan Puas</div>
+          </div>
+          <div class="w-px bg-white/10"></div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-warm-300">30+</div>
+            <div class="text-gray-400 text-sm">Varian Menu</div>
+          </div>
+          <div class="w-px bg-white/10"></div>
+          <div class="text-center">
+            <div class="text-3xl font-extrabold text-warm-300">⭐ 4.9</div>
+            <div class="text-gray-400 text-sm">Rating</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Hero image -->
+      <div class="flex-1 flex justify-center">
+        <div class="relative">
+          <div class="w-72 h-72 md:w-96 md:h-96 rounded-full overflow-hidden border-4 border-warm-400/30 shadow-2xl">
+            <img src="{{ url_for('static', filename='img/hero_warmindo.png') }}" alt="Menu WARMINDO"
+              class="w-full h-full object-cover" onerror="this.src='https://placehold.co/400x400/e84a0c/fff?text=🍜'" />
+          </div>
+          <div
+            class="absolute -top-4 -right-4 bg-warm-400 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-lg rotate-6 animate-bounce">
+            🌶️ Level Pedas
+          </div>
+          <div
+            class="absolute -bottom-4 -left-4 bg-white text-charcoal text-xs font-bold px-3 py-2 rounded-xl shadow-lg -rotate-3">
+            🚀 Order Online
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Wave divider -->
+  <div class="absolute bottom-0 left-0 right-0">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 60" fill="#FDF8F0">
+      <path d="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z" />
+    </svg>
+  </div>
+</section>
+
+<!-- ===== MENU FAVORIT SECTION ===== -->
+<section class="py-16 px-4" id="menu-favorit">
+  <div class="container mx-auto max-w-5xl">
+    <div class="text-center mb-10">
+      <span class="text-primary-500 font-semibold text-sm uppercase tracking-widest">Pilihan Terbaik</span>
+      <h2 class="text-3xl md:text-4xl font-extrabold text-charcoal mt-2">Menu Favorit 🔥</h2>
+      <p class="text-gray-500 mt-2">Paling banyak dipesan, paling bikin nagih</p>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+      {% for m in menu_favorit %}
+      <div class="menu-card bg-white rounded-2xl overflow-hidden shadow-sm cursor-pointer"
+        onclick="window.location.href='/menu'">
+        <div class="aspect-square overflow-hidden bg-gradient-to-br from-orange-50 to-red-50 relative">
+          <img src="{% if m.foto %}{{ url_for('static', filename=m.foto) }}{% else %}data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs={% endif %}"
+               alt="{{ m.nama }}" class="w-full h-full object-cover"
+               onerror="this.src='data:image/svg+xml,' + encodeURIComponent('<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'300\' height=\'300\'><rect width=\'300\' height=\'300\' fill=\'%23ff6b35\'/><text x=\'50%\' y=\'50%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'white\' font-size=\'48\'>🍜</text></svg>')"/>
+          <div class="absolute top-2 right-2 bg-primary-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+            #{{ loop.index }}
+          </div>
+        </div>
+        <div class="p-3">
+          <h3 class="font-bold text-charcoal text-sm leading-tight line-clamp-2">{{ m.nama }}</h3>
+          <div class="flex items-center justify-between mt-2">
+            <span class="text-primary-500 font-extrabold text-sm">Rp {{ '{:,}'.format(m.harga).replace(',','.')
+              }}</span>
+            <a href="/menu"
+              class="bg-primary-500 text-white rounded-lg px-2 py-1 text-xs font-semibold hover:bg-primary-600 transition">+</a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="text-center mt-8">
+      <a href="/menu" class="inline-flex items-center gap-2 text-primary-500 font-semibold hover:underline text-lg">
+        Lihat Semua Menu
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+        </svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== KEUNGGULAN SECTION ===== -->
+<section class="py-16 px-4 bg-white">
+  <div class="container mx-auto max-w-5xl">
+    <div class="text-center mb-10">
+      <span class="text-primary-500 font-semibold text-sm uppercase tracking-widest">Kenapa Kami?</span>
+      <h2 class="text-3xl md:text-4xl font-extrabold text-charcoal mt-2">Keunggulan Warmindo ✨</h2>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="bg-gradient-to-br from-orange-50 to-red-50 rounded-3xl p-7 text-center hover:shadow-md transition">
+        <div class="w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">🌶️</div>
+        <h3 class="font-bold text-lg mb-2 text-charcoal">Level Pedas Custom</h3>
+        <p class="text-gray-500 text-sm leading-relaxed">Pilih tingkat kepedasan sesuai selera, dari tidak pedas hingga extra extra hot!</p>
+      </div>
+      <div class="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-3xl p-7 text-center hover:shadow-md transition">
+        <div class="w-16 h-16 bg-warm-100 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">⚡</div>
+        <h3 class="font-bold text-lg mb-2 text-charcoal">Order Super Cepat</h3>
+        <p class="text-gray-500 text-sm leading-relaxed">Pesan online, makanan siap dalam 10–15 menit. Ga perlu antri lama!</p>
+      </div>
+      <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-3xl p-7 text-center hover:shadow-md transition">
+        <div class="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">💰</div>
+        <h3 class="font-bold text-lg mb-2 text-charcoal">Harga Bersahabat</h3>
+        <p class="text-gray-500 text-sm leading-relaxed">Mulai dari Rp 5.000 saja! Enak, kenyang, kantong tetap aman.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== PROMO BANNER ===== -->
+<section class="py-10 px-4">
+  <div class="container mx-auto max-w-5xl">
+    <div class="bg-gradient-to-r from-primary-500 to-primary-700 rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-6 text-white shadow-xl">
+      <div>
+        <div class="text-sm font-semibold uppercase tracking-widest text-primary-200 mb-1">Order Sekarang</div>
+        <h2 class="text-2xl md:text-3xl font-extrabold mb-2">Lapar? Langsung Pesan! 🍜</h2>
+        <p class="text-primary-200 text-sm">Lebih dari 15 menu pilihan siap untuk kamu santap.</p>
+      </div>
+      <a href="/menu" class="flex-shrink-0 bg-white hover:bg-primary-50 text-primary-600 font-extrabold px-8 py-4 rounded-2xl transition shadow-lg text-sm hover:-translate-y-0.5 hover:shadow-xl">
+        Lihat Menu Lengkap →
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== LOKASI & MAP SECTION ===== -->
+<section class="py-16 px-4" id="lokasi">
+  <div class="container mx-auto max-w-4xl">
+    <div class="text-center mb-10">
+      <span class="text-primary-500 font-semibold text-sm uppercase tracking-widest">Temukan Kami</span>
+      <h2 class="text-3xl md:text-4xl font-extrabold text-charcoal mt-2">Lokasi Kami 📍</h2>
+    </div>
+    <div class="grid md:grid-cols-2 gap-8 items-center">
+      <div class="space-y-5">
+        <div class="flex items-start gap-4 bg-white rounded-2xl p-5 shadow-sm">
+          <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">📍
+          </div>
+          <div>
+            <div class="font-bold text-charcoal mb-1">Alamat</div>
+            <p class="text-gray-600 text-sm">{{ pengaturan.alamat if pengaturan else 'Jl. Contoh No. 123, Kota Baik
+              12345' }}</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-4 bg-white rounded-2xl p-5 shadow-sm">
+          <div class="w-12 h-12 bg-warm-100 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">🕐</div>
+          <div>
+            <div class="font-bold text-charcoal mb-1">Jam Operasional</div>
+            <p class="text-gray-600 text-sm">Setiap hari: <span class="font-semibold text-charcoal">{{
+                (pengaturan.jam_buka if pengaturan else '07:00') }} – {{ (pengaturan.jam_tutup if pengaturan else
+                '22:00') }} WIB</span></p>
+          </div>
+        </div>
+        <div class="flex items-start gap-4 bg-white rounded-2xl p-5 shadow-sm">
+          <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">📱
+          </div>
+          <div>
+            <div class="font-bold text-charcoal mb-1">Kontak</div>
+            <p class="text-gray-600 text-sm">WhatsApp: <a
+                href="https://wa.me/{{ pengaturan.no_wa if pengaturan else '6281234567890' }}"
+                class="text-primary-500 font-semibold">+{{ pengaturan.no_wa if pengaturan else '6281234567890' }}</a>
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="rounded-2xl overflow-hidden shadow-lg bg-gray-200" style="height:300px">
+        <iframe
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.521260322283!2d106.8195613!3d-6.1944491!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69f5390917b759%3A0x6b45e67356080477!2sMonas!5e0!3m2!1sen!2sid!4v1688000000000!5m2!1sen!2sid"
+          width="100%" height="300" style="border:0;" allowfullscreen="" loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade" title="Lokasi WARMINDO">
+        </iframe>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FLOATING BUTTONS ===== -->
+<!-- WhatsApp -->
+<a href="https://wa.me/{{ pengaturan.no_wa if pengaturan else '6281234567890' }}?text=Halo+Jokian+Warmindo,+saya+mau+pesan..."
+  id="wa-float"
+  class="wa-button fixed bottom-24 right-4 z-50 w-14 h-14 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center shadow-xl transition-transform hover:scale-110"
+  target="_blank" aria-label="Hubungi via WhatsApp">
+  <svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+    <path
+      d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+  </svg>
+</a>
+
+<!-- Floating Cart -->
+<a href="/keranjang" id="floating-cart"
+  class="floating-cart-btn floating-cart fixed bottom-4 right-4 z-50 bg-primary-500 hover:bg-primary-600 text-white rounded-2xl px-5 py-3 flex items-center gap-3 shadow-xl transition-all hover:scale-105 hidden">
+  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+      d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+  </svg>
+  <span class="font-bold text-sm cart-total-display">Rp 0</span>
+  <span
+    class="cart-badge bg-white text-primary-500 text-xs font-extrabold w-5 h-5 rounded-full flex items-center justify-center hidden">0</span>
+</a>
+{% endblock %}
+
+{% block footer %}
+{% include "customer/footer.html" %}
+{% endblock %}

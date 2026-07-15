@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}403 — Akses Ditolak{% endblock %}
+
+{% block content %}
+<div class="min-h-[80vh] flex items-center justify-center px-4">
+  <div class="text-center max-w-md">
+    <div class="text-8xl mb-4">🔒</div>
+    <h1 class="text-6xl font-extrabold text-red-500 mb-2">403</h1>
+    <h2 class="text-2xl font-bold text-charcoal mb-3">Akses Ditolak</h2>
+    <p class="text-gray-500 mb-8 leading-relaxed">
+      Maaf, kamu tidak memiliki izin untuk mengakses halaman ini.
+      Halaman ini hanya tersedia untuk pengguna dengan hak akses tertentu.
+    </p>
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+      <a href="/"
+         class="bg-primary-500 hover:bg-primary-600 text-white font-bold px-6 py-3 rounded-2xl transition shadow-lg hover:shadow-xl flex items-center gap-2">
+        🏠 Kembali ke Beranda
+      </a>
+      <a href="/admin/dashboard"
+         class="border-2 border-gray-300 text-gray-600 hover:bg-gray-50 font-bold px-6 py-3 rounded-2xl transition flex items-center gap-2">
+        📊 Dashboard Admin
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

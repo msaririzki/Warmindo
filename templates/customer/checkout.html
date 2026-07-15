@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block title %}Checkout — WARMINDO{% endblock %}
+
+{% block navbar %}{% include "customer/navbar.html" %}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 max-w-2xl py-8">
+  <h1 class="text-3xl font-extrabold text-charcoal mb-6 flex items-center gap-3">
+    📋 Detail Pesanan
+  </h1>
+
+  <form id="checkout-form" method="POST" action="/checkout" class="space-y-5">
+
+    <!-- Data Pemesan -->
+    <div class="bg-white rounded-2xl shadow-sm p-5">
+      <h2 class="font-bold text-charcoal text-lg mb-4 flex items-center gap-2">
+        <span class="w-7 h-7 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center text-sm font-extrabold">1</span>
+        Data Pemesan
+      </h2>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Lengkap <span class="text-red-500">*</span></label>
+          <input type="text" id="nama" name="nama" required placeholder="Nama kamu..."
+                 class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"/>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">No. WhatsApp <span class="text-red-500">*</span></label>
+          <input type="tel" id="no_hp" name="no_hp" required placeholder="08xxxxxxxxxx"
+                 pattern="[0-9+\-]{10,15}" minlength="10" maxlength="15"
+                 title="Masukkan nomor HP yang valid (10-15 digit angka)"
+                 class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- Metode Ambil -->
+    <div class="bg-white rounded-2xl shadow-sm p-5">
+      <h2 class="font-bold text-charcoal text-lg mb-4 flex items-center gap-2">
+        <span class="w-7 h-7 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center text-sm font-extrabold">2</span>
+        Metode Pengambilan
+      </h2>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="ambil-option cursor-pointer">
+          <input type="radio" name="metode_ambil" value="ambil" class="sr-only" checked onchange="toggleAlamat()"/>
+          <div class="ambil-box border-2 border-primary-500 bg-primary-50 rounded-xl p-4 text-center transition">
+            <div class="text-3xl mb-2">🏃</div>
+            <div class="font-bold text-sm text-charcoal">Ambil di Tempat</div>
+            <div class="text-xs text-gray-500 mt-1">Gratis</div>
+          </div>
+        </label>
+        <label class="ambil-option cursor-pointer">
+          <input type="radio" name="metode_ambil" value="diantar" class="sr-only" onchange="toggleAlamat()"/>
+          <div class="ambil-box border-2 border-gray-200 rounded-xl p-4 text-center transition hover:border-primary-300">
+            <div class="text-3xl mb-2">🛵</div>
+            <div class="font-bold text-sm text-charcoal">Diantar</div>
+            <div class="text-xs text-gray-500 mt-1">Ongkir tergantung jarak</div>
+          </div>
+        </label>
+      </div>
+
+      <!-- Alamat (conditional) -->
+      <div id="field-alamat" class="hidden mt-4">
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Alamat Lengkap <span class="text-red-500">*</span></label>
+        <textarea id="alamat" name="alamat" rows="3" placeholder="Jl. Contoh No. 123, RT/RW, Kelurahan, Kecamatan..."
+                  class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 resize-none"></textarea>
+        <p class="text-xs text-gray-500 mt-1">Cantumkan patokan / landmark agar kurir mudah menemukan</p>
+      </div>
+    </div>
+
+    <!-- Metode Bayar -->
+    <div class="bg-white rounded-2xl shadow-sm p-5">
+      <h2 class="font-bold text-charcoal text-lg mb-4 flex items-center gap-2">
+        <span class="w-7 h-7 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center text-sm font-extrabold">3</span>
+        Metode Pembayaran
+      </h2>
+      <div class="space-y-2">
+        {% for val, label, desc in [('cod','💵 COD / Tunai','Bayar saat pesanan tiba/diambil'),('transfer','🏦 Transfer Bank','BCA/BRI/Mandiri — konfirmasi via WA'),('qris','📱 QRIS','Scan QR di tempat atau dikirim via WA')] %}
+        <label class="bayar-option flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-primary-300 transition has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50">
+          <input type="radio" name="metode_bayar" value="{{ val }}" class="sr-only" {% if loop.first %}checked{% endif %} onchange="toggleQRIS()"/>
+          <div class="flex-1">
+            <div class="font-semibold text-sm text-charcoal">{{ label }}</div>
+            <div class="text-xs text-gray-500">{{ desc }}</div>
+          </div>
+          <div class="w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center flex-shrink-0 radio-dot">
+            <div class="w-2.5 h-2.5 rounded-full bg-primary-500 hidden check-dot"></div>
+          </div>
+        </label>
+        {% endfor %}
+      </div>
+
+      <!-- QRIS image (conditional) -->
+      <div id="qris-display" class="hidden mt-4 text-center">
+        <div class="bg-gray-50 rounded-xl p-4 inline-block">
+          <img src="https://placehold.co/200x200/000/fff?text=QR+CODE" alt="QRIS WARMINDO"
+               class="w-48 h-48 mx-auto rounded-lg"/>
+          <p class="text-xs text-gray-500 mt-2">Scan QRIS di atas atau minta dikirim via WA</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Catatan -->
+    <div class="bg-white rounded-2xl shadow-sm p-5">
+      <h2 class="font-bold text-charcoal text-lg mb-4 flex items-center gap-2">
+        <span class="w-7 h-7 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center text-sm font-extrabold">4</span>
+        Catatan Tambahan
+      </h2>
+      <textarea id="catatan" name="catatan" rows="2" placeholder="Catatan untuk dapur (opsional)..."
+                class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 resize-none"></textarea>
+    </div>
+
+    <!-- Ringkasan Pesanan -->
+    <div class="bg-white rounded-2xl shadow-sm p-5">
+      <h2 class="font-bold text-charcoal text-lg mb-4">📦 Ringkasan Pesanan</h2>
+      <div id="order-summary" class="space-y-2 mb-4 max-h-48 overflow-y-auto pr-1">
+        <!-- Rendered by JS -->
+      </div>
+      <div class="border-t border-gray-100 pt-3 flex justify-between font-extrabold text-charcoal">
+        <span>Total</span>
+        <span id="checkout-total" class="text-primary-500 text-xl">Rp 0</span>
+      </div>
+    </div>
+
+    <!-- Hidden fields populated by JS before submit -->
+    <input type="hidden" name="metode_ambil" id="h-metode-ambil" value="ambil"/>
+    <input type="hidden" name="metode_bayar" id="h-metode-bayar" value="cod"/>
+
+    <!-- Tombol Submit -->
+    <button type="button" id="btn-konfirmasi" onclick="submitOrder()"
+            class="w-full bg-primary-500 hover:bg-primary-600 text-white font-extrabold py-4 rounded-2xl text-lg transition shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center justify-center gap-2">
+      ✅ Konfirmasi Pesanan
+    </button>
+
+    <!-- Tombol Batal -->
+    <button type="button" id="btn-batal-checkout" onclick="openModal('modal-batal-checkout')"
+            class="w-full mt-3 bg-white border-2 border-red-400 hover:bg-red-50 text-red-500 font-bold py-3.5 rounded-2xl text-base transition flex items-center justify-center gap-2">
+      ❌ Batalkan Pesanan
+    </button>
+  </form>
+
+  <!-- Modal Konfirmasi Batal -->
+  <div id="modal-batal-checkout" class="modal-overlay fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="modal-box bg-white w-full max-w-sm rounded-3xl overflow-hidden scale-95 opacity-0 transition-all p-6 text-center">
+      <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <span class="text-3xl">⚠️</span>
+      </div>
+      <h3 class="text-xl font-extrabold text-charcoal mb-2">Batalkan Pesanan?</h3>
+      <p class="text-gray-500 text-sm mb-6">Pesanan kamu belum dikonfirmasi. Jika dibatalkan, kamu akan kembali ke halaman keranjang.</p>
+      <div class="flex gap-3">
+        <button onclick="closeModal('modal-batal-checkout')"
+                class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl text-sm transition">
+          Kembali
+        </button>
+        <button onclick="batalkanCheckout()"
+                class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl text-sm transition">
+          Ya, Batalkan
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toggleAlamat() {
+  const val = document.querySelector('[name=metode_ambil]:checked')?.value;
+  const el = document.getElementById('field-alamat');
+  el.classList.toggle('hidden', val !== 'diantar');
+  document.getElementById('alamat').required = val === 'diantar';
+
+  // Update visual
+  document.querySelectorAll('.ambil-option input').forEach(inp => {
+    const box = inp.closest('.ambil-option').querySelector('.ambil-box');
+    if (inp.checked) {
+      box.classList.add('border-primary-500','bg-primary-50');
+      box.classList.remove('border-gray-200');
+    } else {
+      box.classList.remove('border-primary-500','bg-primary-50');
+      box.classList.add('border-gray-200');
+    }
+  });
+}
+
+function toggleQRIS() {
+  const val = document.querySelector('[name=metode_bayar]:checked')?.value;
+  document.getElementById('qris-display').classList.toggle('hidden', val !== 'qris');
+}
+
+function renderOrderSummary() {
+  const items = Cart.getAll();
+  const el = document.getElementById('order-summary');
+  if (!items.length) {
+    el.innerHTML = '<p class="text-gray-400 text-sm text-center py-4">Keranjang kosong — <a href="/menu" class="text-primary-500 underline">tambah menu</a></p>';
+    return;
+  }
+  el.innerHTML = items.map(i => `
+    <div class="flex justify-between items-center text-sm">
+      <div class="flex-1 min-w-0">
+        <span class="font-medium text-charcoal">${i.nama}</span>
+        <span class="text-gray-400 text-xs"> · ${i.varian} × ${i.qty}</span>
+      </div>
+      <span class="font-semibold text-charcoal flex-shrink-0 ml-2">${formatRupiah(i.harga * i.qty)}</span>
+    </div>
+  `).join('');
+  document.getElementById('checkout-total').textContent = formatRupiah(Cart.total());
+}
+
+function submitOrder() {
+  const items = Cart.getAll();
+  if (!items.length) {
+    showToast('Keranjang kamu kosong!', 'warning');
+    return;
+  }
+
+  // Validasi input
+  const nama = document.getElementById('nama')?.value.trim();
+  const noHp = document.getElementById('no_hp')?.value.trim();
+  if (!nama) {
+    showToast('Nama lengkap wajib diisi!', 'warning');
+    document.getElementById('nama')?.focus();
+    return;
+  }
+  if (!noHp || noHp.replace(/[+\-]/g, '').length < 10 || !/^[0-9+\-]+$/.test(noHp)) {
+    showToast('Nomor HP tidak valid! Minimal 10 digit angka.', 'warning');
+    document.getElementById('no_hp')?.focus();
+    return;
+  }
+
+  // Sync radio values into hidden fields (radio inputs are sr-only)
+  const ambilVal = document.querySelector('[name=metode_ambil]:checked')?.value || 'ambil';
+  const bayarVal = document.querySelector('[name=metode_bayar]:checked')?.value || 'cod';
+  document.getElementById('h-metode-ambil').value = ambilVal;
+  document.getElementById('h-metode-bayar').value = bayarVal;
+
+  const btn = document.getElementById('btn-konfirmasi');
+  btn.disabled = true;
+  btn.textContent = 'Memproses...';
+
+  // Clear localStorage cart BEFORE submit so it's gone when page reloads
+  Cart.clear();
+
+  document.getElementById('checkout-form').submit();
+}
+
+function batalkanCheckout() {
+  closeModal('modal-batal-checkout');
+  showToast('Pesanan dibatalkan', 'info');
+  setTimeout(() => { window.location.href = '/keranjang'; }, 500);
+}
+
+renderOrderSummary();
+toggleAlamat();
+toggleQRIS();
+</script>
+{% endblock %}
+
+{% block footer %}{% include "customer/footer.html" %}{% endblock %}

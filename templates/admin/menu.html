@@ -1,0 +1,392 @@
+{% extends "base.html" %}
+{% block title %}Kelola Menu — WARMINDO Admin{% endblock %}
+
+{# current_page, store_open, pending_count come from route context #}
+
+{% block navbar %}{% include "admin/sidebar.html" %}{% endblock %}
+
+{% block content %}
+<div class="lg:ml-64 p-4 md:p-6 bg-gray-50 min-h-screen">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-extrabold text-charcoal">🍜 Kelola Menu</h1>
+    <button onclick="resetAndOpenTambah()"
+            class="bg-primary-500 hover:bg-primary-600 text-white font-bold px-5 py-2.5 rounded-xl transition flex items-center gap-2 text-sm shadow-md">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      Tambah Menu
+    </button>
+  </div>
+
+  <!-- Filter & Search -->
+  <div class="bg-white rounded-2xl shadow-sm p-4 mb-5 flex flex-wrap gap-3 items-center">
+    <div class="relative flex-1 min-w-48">
+      <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      <input type="text" id="admin-search-menu" placeholder="Cari menu..." oninput="adminSearchMenu(this.value)"
+             class="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-300 text-sm"/>
+    </div>
+    <select id="admin-cat-filter" onchange="adminFilterCat(this.value)"
+            class="border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 bg-white">
+      <option value="">Semua Kategori</option>
+      <option>indomie</option><option>nasi</option><option>minuman</option><option>topping</option>
+    </select>
+  </div>
+
+  <!-- Menu Table -->
+  <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 border-b border-gray-100">
+        <tr>
+          <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Menu</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Kategori</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Harga</th>
+          <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">Stok</th>
+          <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="menu-table-body" class="divide-y divide-gray-50">
+        {% for m in menu %}
+        <tr id="menu-row-{{ m.id }}" class="admin-menu-row hover:bg-gray-50 transition" data-nama="{{ m.nama }}" data-kat="{{ m.kategori }}">
+          <td class="px-5 py-3.5">
+            <div class="flex items-center gap-3">
+              <img id="foto-thumb-{{ m.id }}"
+                   src="{% if m.foto %}/static/{{ m.foto }}{% else %}data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs={% endif %}"
+                   alt="{{ m.nama }}"
+                   class="w-10 h-10 rounded-xl object-cover flex-shrink-0 bg-orange-100"
+                   data-emoji="{{ '🍜' if m.kategori == 'indomie' else ('🍚' if m.kategori == 'nasi' else ('🥤' if m.kategori == 'minuman' else '🥚')) }}"
+                   onerror="imgFallback(this)"
+              />
+              <div>
+                <div id="nama-cell-{{ m.id }}" class="font-semibold text-charcoal">{{ m.nama }}</div>
+                <div class="text-xs text-gray-400 md:hidden">{{ m.kategori }}</div>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3.5 hidden md:table-cell">
+            <span class="bg-gray-100 text-gray-600 text-xs font-medium px-2.5 py-1 rounded-full capitalize">{{ m.kategori }}</span>
+          </td>
+          <td class="px-4 py-3.5 font-semibold text-charcoal">Rp {{ '{:,}'.format(m.harga).replace(',','.') }}</td>
+          <td class="px-4 py-3.5 text-center">
+            <!-- Quick toggle stok -->
+            <button onclick="toggleStokFromEl(this)"
+                    data-menu-id="{{ m.id }}" data-stok="{{ m.status_stok }}"
+                    class="toggle-stok-btn text-xs font-bold px-3 py-1.5 rounded-full transition
+                           {% if m.status_stok == 'tersedia' %}bg-green-100 text-green-700 hover:bg-green-200{% else %}badge-habis hover:bg-gray-200{% endif %}">
+              {{ '✅ Tersedia' if m.status_stok == 'tersedia' else '❌ Habis' }}
+            </button>
+          </td>
+          <td class="px-4 py-3.5 text-right">
+            <div class="flex items-center justify-end gap-2">
+              <button onclick="editMenuFromEl(this)"
+                      data-id="{{ m.id }}" data-nama="{{ m.nama }}" data-kategori="{{ m.kategori }}"
+                      data-harga="{{ m.harga }}" data-stok="{{ m.stok }}" data-status="{{ m.status_stok }}"
+                      class="text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition" aria-label="Edit">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+              </button>
+              <button onclick="confirmDeleteFromEl(this)"
+                      data-del-id="{{ m.id }}" data-del-nama="{{ m.nama }}"
+                      class="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition" aria-label="Hapus">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Tambah/Edit Menu -->
+<div id="modal-tambah-menu" class="modal-overlay fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+  <div class="modal-box bg-white w-full max-w-lg rounded-3xl overflow-hidden scale-95 opacity-0 transition-all max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+      <h3 id="modal-menu-title" class="font-extrabold text-charcoal text-lg">Tambah Menu Baru</h3>
+      <button onclick="closeModal('modal-tambah-menu')" class="text-gray-400 hover:text-gray-600 transition text-xl">✕</button>
+    </div>
+    <form id="form-menu" onsubmit="submitMenu(event)" enctype="multipart/form-data" class="p-6 space-y-4">
+      <input type="hidden" id="menu-id" name="id"/>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="col-span-2">
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Nama Menu <span class="text-red-500">*</span></label>
+          <input type="text" id="menu-nama" name="nama" required placeholder="Nama menu..."
+                 class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"/>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Kategori</label>
+          <select id="menu-kategori" name="kategori" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 bg-white">
+            <option value="indomie">Indomie</option>
+            <option value="nasi">Nasi</option>
+            <option value="minuman">Minuman</option>
+            <option value="topping">Topping</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Harga (Rp)</label>
+          <input type="number" id="menu-harga" name="harga" required min="0" placeholder="0"
+                 class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"/>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Stok</label>
+          <input type="number" id="menu-stok" name="stok" min="0" placeholder="99"
+                 class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"/>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Status Stok</label>
+          <select id="menu-status" name="status_stok" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 bg-white">
+            <option value="tersedia">Tersedia</option>
+            <option value="habis">Habis</option>
+          </select>
+        </div>
+        <div class="col-span-2">
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Foto Menu</label>
+          <div class="relative border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-primary-300 transition cursor-pointer">
+            <div class="text-3xl mb-2">📷</div>
+            <p class="text-sm text-gray-500">Klik untuk upload foto</p>
+            <p class="text-xs text-gray-400 mt-1">JPG, PNG (maks. 2MB)</p>
+            <input type="file" name="foto" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full" onchange="previewFoto(event)"/>
+          </div>
+          <img id="foto-preview" class="hidden mt-3 w-24 h-24 object-cover rounded-xl border border-gray-200"/>
+        </div>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button type="button" onclick="closeModal('modal-tambah-menu')"
+                class="flex-1 border border-gray-200 text-gray-600 font-semibold py-3 rounded-xl hover:bg-gray-50 transition text-sm">Batal</button>
+        <button type="submit"
+                class="flex-1 bg-primary-500 hover:bg-primary-600 text-white font-bold py-3 rounded-xl transition text-sm shadow-md">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Konfirmasi Hapus -->
+<div id="modal-hapus" class="modal-overlay fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+  <div class="modal-box bg-white w-full max-w-sm rounded-3xl p-6 scale-95 opacity-0 transition-all text-center">
+    <div class="text-5xl mb-4">🗑️</div>
+    <h3 class="font-extrabold text-charcoal text-lg mb-2">Hapus Menu?</h3>
+    <p class="text-gray-500 text-sm mb-6">Yakin ingin menghapus <span id="hapus-nama" class="font-semibold text-charcoal"></span>? Tindakan ini tidak bisa dibatalkan.</p>
+    <div class="flex gap-3">
+      <button onclick="closeModal('modal-hapus')" class="flex-1 border border-gray-200 text-gray-600 font-semibold py-3 rounded-xl hover:bg-gray-50 transition text-sm">Batal</button>
+      <button id="btn-hapus-konfirm" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl transition text-sm">Hapus</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function resetAndOpenTambah() {
+  // Reset judul modal
+  document.getElementById('modal-menu-title').textContent = 'Tambah Menu Baru';
+  // Bersihkan semua field form
+  document.getElementById('menu-id').value = '';
+  document.getElementById('menu-nama').value = '';
+  document.getElementById('menu-kategori').value = 'indomie';
+  document.getElementById('menu-harga').value = '';
+  document.getElementById('menu-stok').value = '';
+  document.getElementById('menu-status').value = 'tersedia';
+  // Reset foto input & preview
+  const fileInput = document.querySelector('#form-menu input[type="file"]');
+  if (fileInput) fileInput.value = '';
+  const preview = document.getElementById('foto-preview');
+  if (preview) {
+    preview.classList.add('hidden');
+    preview.src = '';
+  }
+  openModal('modal-tambah-menu');
+}
+
+function imgFallback(img) {
+  const emoji = img.dataset.emoji || '🍜';
+  const enc = encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">` +
+    `<rect width="40" height="40" rx="8" fill="#FED7AA"/>` +
+    `<text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="20">${emoji}</text>` +
+    `</svg>`
+  );
+  img.onerror = null; // prevent infinite loop
+  img.src = 'data:image/svg+xml,' + enc;
+}
+
+function adminSearchMenu(q) {
+  document.querySelectorAll('.admin-menu-row').forEach(r => {
+    const match = r.dataset.nama.toLowerCase().includes(q.toLowerCase());
+    r.style.display = match ? '' : 'none';
+  });
+}
+
+function adminFilterCat(cat) {
+  document.querySelectorAll('.admin-menu-row').forEach(r => {
+    const match = !cat || r.dataset.kat === cat;
+    r.style.display = match ? '' : 'none';
+  });
+}
+
+// Wrapper: baca data-attribute untuk menghindari Jinja2 di onclick
+function toggleStokFromEl(btn) {
+  const id = btn.dataset.menuId;
+  toggleStok(id, btn);
+}
+
+function toggleStok(id, btn) {
+  const isAda = btn.dataset.stok === 'tersedia';
+  const newStatus = isAda ? 'habis' : 'tersedia';
+  fetch(`/admin/menu/${id}/toggle-stok`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status_stok: newStatus }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      btn.dataset.stok = newStatus;
+      if (newStatus === 'tersedia') {
+        btn.className = 'toggle-stok-btn text-xs font-bold px-3 py-1.5 rounded-full transition bg-green-100 text-green-700 hover:bg-green-200';
+        btn.textContent = '✅ Tersedia';
+      } else {
+        btn.className = 'toggle-stok-btn text-xs font-bold px-3 py-1.5 rounded-full transition badge-habis hover:bg-gray-200';
+        btn.textContent = '❌ Habis';
+      }
+      showToast(`Status stok diubah ke "${newStatus}"`, 'success');
+    }
+  })
+  .catch(() => showToast('Gagal update stok', 'error'));
+}
+
+function confirmDeleteFromEl(btn) {
+  const id   = btn.dataset.delId;
+  const nama = btn.dataset.delNama;
+  confirmDelete(id, nama);
+}
+
+function editMenuFromEl(btn) {
+  const m = {
+    id: btn.dataset.id, nama: btn.dataset.nama,
+    kategori: btn.dataset.kategori, harga: btn.dataset.harga,
+    stok: btn.dataset.stok, status_stok: btn.dataset.status,
+  };
+  editMenu(m);
+}
+
+function editMenu(m) {
+  document.getElementById('modal-menu-title').textContent = 'Edit Menu';
+  document.getElementById('menu-id').value = m.id;
+  document.getElementById('menu-nama').value = m.nama;
+  document.getElementById('menu-kategori').value = m.kategori;
+  document.getElementById('menu-harga').value = m.harga;
+  document.getElementById('menu-stok').value = m.stok;
+  document.getElementById('menu-status').value = m.status_stok;
+  // Reset foto input & preview saat buka modal edit
+  const fileInput = document.querySelector('#form-menu input[type="file"]');
+  if (fileInput) fileInput.value = '';
+  const preview = document.getElementById('foto-preview');
+  if (preview) {
+    preview.classList.add('hidden');
+    preview.src = '';
+  }
+  openModal('modal-tambah-menu');
+}
+
+
+function confirmDelete(id, nama) {
+  document.getElementById('hapus-nama').textContent = nama;
+  document.getElementById('btn-hapus-konfirm').onclick = () => {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/admin/menu/${id}/hapus`;
+    document.body.appendChild(form);
+    form.submit();
+  };
+  openModal('modal-hapus');
+}
+
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_SIZE = 2 * 1024 * 1024; // 2 MB
+
+function previewFoto(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  // --- Frontend validation ---
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    showToast('Format file tidak didukung. Gunakan JPG, PNG, atau WEBP.', 'error');
+    e.target.value = '';
+    return;
+  }
+  if (file.size > MAX_SIZE) {
+    showToast('Ukuran file melebihi 2 MB!', 'error');
+    e.target.value = '';
+    return;
+  }
+
+  const preview = document.getElementById('foto-preview');
+  preview.src = URL.createObjectURL(file);
+  preview.classList.remove('hidden');
+}
+
+function submitMenu(e) {
+  e.preventDefault();
+  const form = document.getElementById('form-menu');
+  const id = document.getElementById('menu-id').value;
+  const url = id ? `/admin/menu/${id}/edit` : '/admin/menu/tambah';
+
+  // Validate file before sending
+  const fileInput = form.querySelector('input[type="file"]');
+  if (fileInput && fileInput.files[0]) {
+    const f = fileInput.files[0];
+    if (!ALLOWED_TYPES.includes(f.type)) {
+      showToast('Format file tidak didukung. Gunakan JPG, PNG, atau WEBP.', 'error');
+      return;
+    }
+    if (f.size > MAX_SIZE) {
+      showToast('Ukuran file melebihi 2 MB!', 'error');
+      return;
+    }
+  }
+
+  const formData = new FormData(form);
+  const btn = form.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  btn.textContent = 'Menyimpan...';
+
+  fetch(url, {
+    method: 'POST',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    body: formData
+  })
+  .then(r => r.json())
+  .then(data => {
+    btn.disabled = false;
+    btn.textContent = 'Simpan';
+    if (!data.success) {
+      showToast(data.error || 'Gagal menyimpan menu', 'error');
+      return;
+    }
+    const m = data.menu;
+    closeModal('modal-tambah-menu');
+    showToast('Menu berhasil disimpan!', 'success');
+
+    if (id) {
+      // Update existing row in-place
+      const row = document.getElementById(`menu-row-${m.id}`);
+      if (row) {
+        row.dataset.nama = m.nama;
+        row.dataset.kat = m.kategori;
+        const nameCell = document.getElementById(`nama-cell-${m.id}`);
+        if (nameCell) nameCell.textContent = m.nama;
+        if (m.foto) {
+          const thumb = document.getElementById(`foto-thumb-${m.id}`);
+          if (thumb) thumb.src = `/static/${m.foto}?t=${Date.now()}`;
+        }
+      }
+    } else {
+      // New menu: reload to show new row
+      setTimeout(() => location.reload(), 600);
+    }
+  })
+  .catch(() => {
+    btn.disabled = false;
+    btn.textContent = 'Simpan';
+    showToast('Koneksi gagal', 'error');
+  });
+}
+</script>
+{% endblock %}

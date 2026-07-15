@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+{% block title %}Kelola Kasir — WARMINDO{% endblock %}
+
+{% block navbar %}{% include "admin/sidebar.html" %}{% endblock %}
+
+{% block content %}
+<div class="lg:ml-64 min-h-screen bg-gray-50 p-4 lg:p-6">
+  <div class="max-w-4xl mx-auto">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-2xl font-extrabold text-charcoal flex items-center gap-2">👥 Kelola Akun Kasir</h1>
+        <p class="text-gray-500 text-sm mt-1">Tambah atau hapus akun kasir untuk akses POS</p>
+      </div>
+      <button onclick="openModal('modal-tambah-kasir')"
+              class="bg-primary-500 hover:bg-primary-600 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition shadow-md hover:shadow-lg flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+        Tambah Kasir
+      </button>
+    </div>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+      <div class="mb-4 px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2
+           {% if category == 'success' %}bg-green-50 text-green-700 border border-green-200
+           {% elif category == 'error' %}bg-red-50 text-red-700 border border-red-200
+           {% else %}bg-blue-50 text-blue-700 border border-blue-200{% endif %}">
+        {% if category == 'success' %}✅{% elif category == 'error' %}❌{% else %}ℹ️{% endif %}
+        {{ message }}
+      </div>
+      {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <!-- Kasir list -->
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-100">
+        <h2 class="font-bold text-charcoal text-sm uppercase tracking-wide">Daftar Akun Kasir</h2>
+      </div>
+
+      {% if kasir_list %}
+      <div class="divide-y divide-gray-50">
+        {% for kasir in kasir_list %}
+        <div class="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition">
+          <!-- Avatar -->
+          <div class="w-11 h-11 bg-gradient-to-br from-primary-500 to-warm-400 rounded-xl flex items-center justify-center text-white font-extrabold text-sm shadow-md flex-shrink-0">
+            {{ kasir.username[0].upper() }}
+          </div>
+          <!-- Info -->
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-charcoal text-sm">{{ kasir.username }}</div>
+            <div class="text-gray-400 text-xs flex items-center gap-2 mt-0.5">
+              <span class="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-semibold">
+                🛒 Kasir
+              </span>
+            </div>
+          </div>
+          <!-- Actions -->
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <button onclick="openResetModal({{ kasir.id }}, '{{ kasir.username }}')"
+                    class="text-sm text-gray-500 hover:text-primary-500 px-3 py-1.5 rounded-lg hover:bg-primary-50 transition font-medium flex items-center gap-1">
+              🔑 Reset Password
+            </button>
+            <button onclick="openDeleteModal({{ kasir.id }}, '{{ kasir.username }}')"
+                    class="text-sm text-gray-500 hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 transition font-medium flex items-center gap-1">
+              🗑️ Hapus
+            </button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="flex flex-col items-center justify-center py-16 text-center px-4">
+        <div class="w-20 h-20 bg-gray-100 rounded-3xl flex items-center justify-center text-4xl mb-4">👤</div>
+        <h3 class="text-lg font-bold text-charcoal mb-1">Belum Ada Akun Kasir</h3>
+        <p class="text-gray-500 text-sm mb-6">Tambahkan akun kasir agar karyawan bisa mengakses mode POS.</p>
+        <button onclick="openModal('modal-tambah-kasir')"
+                class="bg-primary-500 hover:bg-primary-600 text-white font-bold px-6 py-2.5 rounded-xl text-sm transition shadow-md">
+          + Tambah Kasir Pertama
+        </button>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Info box -->
+    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-2xl p-5">
+      <h3 class="font-bold text-blue-800 text-sm mb-2 flex items-center gap-2">ℹ️ Tentang Akun Kasir</h3>
+      <ul class="text-blue-700 text-sm space-y-1.5">
+        <li class="flex items-start gap-2"><span class="text-blue-400 mt-0.5">•</span>Kasir bisa login di <strong>/admin/login</strong> untuk mengakses Mode POS, Pesanan Online, dan Kelola Menu.</li>
+        <li class="flex items-start gap-2"><span class="text-blue-400 mt-0.5">•</span>Kasir <strong>tidak</strong> dapat mengakses Laporan, Pengaturan, dan Kelola Kasir.</li>
+        <li class="flex items-start gap-2"><span class="text-blue-400 mt-0.5">•</span>Hanya pemilik (owner) yang bisa menambah/menghapus akun kasir.</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal: Tambah Kasir -->
+<div id="modal-tambah-kasir" class="modal-overlay fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+  <div class="modal-box bg-white w-full max-w-md rounded-3xl overflow-hidden scale-95 opacity-0 transition-all">
+    <div class="p-6">
+      <div class="text-center mb-5">
+        <div class="w-14 h-14 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-3">
+          <span class="text-2xl">👤</span>
+        </div>
+        <h3 class="text-xl font-extrabold text-charcoal">Tambah Akun Kasir</h3>
+        <p class="text-gray-500 text-sm mt-1">Buat akun baru untuk karyawan kasir</p>
+      </div>
+      <form action="/admin/kelola-kasir/tambah" method="POST" id="form-tambah-kasir" class="space-y-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Username <span class="text-red-500">*</span></label>
+          <input type="text" name="username" id="kasir-username" required minlength="3" maxlength="30"
+                 placeholder="contoh: kasir1"
+                 pattern="[a-zA-Z0-9_]+"
+                 title="Hanya huruf, angka, dan underscore"
+                 class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"/>
+          <p class="text-xs text-gray-400 mt-1">Hanya huruf, angka, dan underscore. Minimal 3 karakter.</p>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Password <span class="text-red-500">*</span></label>
+          <div class="relative">
+            <input type="password" name="password" id="kasir-password" required minlength="6"
+                   placeholder="Minimal 6 karakter"
+                   class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 pr-12"/>
+            <button type="button" onclick="toggleKasirPassword('kasir-password')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Konfirmasi Password <span class="text-red-500">*</span></label>
+          <input type="password" name="confirm_password" id="kasir-confirm" required minlength="6"
+                 placeholder="Ketik ulang password"
+                 class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"/>
+        </div>
+      </form>
+    </div>
+    <div class="p-4 border-t border-gray-100 flex gap-3">
+      <button onclick="closeModal('modal-tambah-kasir')"
+              class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl text-sm transition">
+        Batal
+      </button>
+      <button onclick="submitTambahKasir()"
+              class="flex-1 bg-primary-500 hover:bg-primary-600 text-white font-bold py-3 rounded-xl text-sm transition">
+        Simpan Akun
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Hapus Kasir -->
+<div id="modal-hapus-kasir" class="modal-overlay fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+  <div class="modal-box bg-white w-full max-w-sm rounded-3xl overflow-hidden scale-95 opacity-0 transition-all p-6 text-center">
+    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+      <span class="text-3xl">⚠️</span>
+    </div>
+    <h3 class="text-xl font-extrabold text-charcoal mb-2">Hapus Akun Kasir?</h3>
+    <p class="text-gray-500 text-sm mb-6">Akun <strong id="hapus-kasir-nama"></strong> akan dihapus permanen dan tidak bisa login lagi.</p>
+    <form id="form-hapus-kasir" method="POST">
+      <div class="flex gap-3">
+        <button type="button" onclick="closeModal('modal-hapus-kasir')"
+                class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl text-sm transition">
+          Batal
+        </button>
+        <button type="submit"
+                class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl text-sm transition">
+          Ya, Hapus
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Reset Password -->
+<div id="modal-reset-kasir" class="modal-overlay fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+  <div class="modal-box bg-white w-full max-w-md rounded-3xl overflow-hidden scale-95 opacity-0 transition-all">
+    <div class="p-6">
+      <div class="text-center mb-5">
+        <div class="w-14 h-14 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
+          <span class="text-2xl">🔑</span>
+        </div>
+        <h3 class="text-xl font-extrabold text-charcoal">Reset Password</h3>
+        <p class="text-gray-500 text-sm mt-1">Set password baru untuk <strong id="reset-kasir-nama"></strong></p>
+      </div>
+      <form id="form-reset-kasir" method="POST" class="space-y-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Password Baru <span class="text-red-500">*</span></label>
+          <div class="relative">
+            <input type="password" name="new_password" id="reset-password" required minlength="6"
+                   placeholder="Minimal 6 karakter"
+                   class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 pr-12"/>
+            <button type="button" onclick="toggleKasirPassword('reset-password')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Konfirmasi Password Baru <span class="text-red-500">*</span></label>
+          <input type="password" name="confirm_password" id="reset-confirm" required minlength="6"
+                 placeholder="Ketik ulang password baru"
+                 class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"/>
+        </div>
+      </form>
+    </div>
+    <div class="p-4 border-t border-gray-100 flex gap-3">
+      <button onclick="closeModal('modal-reset-kasir')"
+              class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl text-sm transition">
+        Batal
+      </button>
+      <button onclick="submitResetKasir()"
+              class="flex-1 bg-primary-500 hover:bg-primary-600 text-white font-bold py-3 rounded-xl text-sm transition">
+        Simpan Password
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toggleKasirPassword(inputId) {
+  const inp = document.getElementById(inputId);
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function submitTambahKasir() {
+  const username = document.getElementById('kasir-username').value.trim();
+  const password = document.getElementById('kasir-password').value;
+  const confirm = document.getElementById('kasir-confirm').value;
+
+  if (!username || username.length < 3) {
+    showToast('Username minimal 3 karakter!', 'warning');
+    return;
+  }
+  if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+    showToast('Username hanya boleh huruf, angka, dan underscore!', 'warning');
+    return;
+  }
+  if (!password || password.length < 6) {
+    showToast('Password minimal 6 karakter!', 'warning');
+    return;
+  }
+  if (password !== confirm) {
+    showToast('Password dan konfirmasi tidak cocok!', 'warning');
+    return;
+  }
+
+  document.getElementById('form-tambah-kasir').submit();
+}
+
+function openDeleteModal(kasirId, username) {
+  document.getElementById('hapus-kasir-nama').textContent = username;
+  document.getElementById('form-hapus-kasir').action = `/admin/kelola-kasir/${kasirId}/hapus`;
+  openModal('modal-hapus-kasir');
+}
+
+function openResetModal(kasirId, username) {
+  document.getElementById('reset-kasir-nama').textContent = username;
+  document.getElementById('form-reset-kasir').action = `/admin/kelola-kasir/${kasirId}/reset-password`;
+  document.getElementById('reset-password').value = '';
+  document.getElementById('reset-confirm').value = '';
+  openModal('modal-reset-kasir');
+}
+
+function submitResetKasir() {
+  const password = document.getElementById('reset-password').value;
+  const confirm = document.getElementById('reset-confirm').value;
+
+  if (!password || password.length < 6) {
+    showToast('Password minimal 6 karakter!', 'warning');
+    return;
+  }
+  if (password !== confirm) {
+    showToast('Password dan konfirmasi tidak cocok!', 'warning');
+    return;
+  }
+
+  document.getElementById('form-reset-kasir').submit();
+}
+</script>
+{% endblock %}

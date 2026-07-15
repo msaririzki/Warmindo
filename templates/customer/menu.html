@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% block title %}Menu — WARMINDO{% endblock %}
+{% block meta_description %}Daftar menu lengkap WARMINDO — Indomie, Nasi, Minuman, dan Topping pilihan.{% endblock %}
+
+{% block navbar %}{% include "customer/navbar.html" %}{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-12 px-4 text-center">
+  <h1 class="text-4xl md:text-5xl font-extrabold mb-2">Menu Kami 🍜</h1>
+  <p class="text-primary-200">Pilih favoritmu, kustomisasi sesuai selera!</p>
+</div>
+
+<div class="container mx-auto px-4 max-w-5xl py-8">
+
+  <!-- Search & Filter -->
+  <div class="bg-white rounded-2xl p-4 shadow-sm mb-6 flex flex-col sm:flex-row gap-3">
+    <div class="relative flex-1">
+      <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+      </svg>
+      <input type="text" id="search-menu" placeholder="Cari menu..." oninput="searchMenu(this.value)"
+             class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-300 text-sm"/>
+    </div>
+    <div class="flex gap-2 overflow-x-auto pb-1 sm:pb-0" id="cat-tabs">
+      {% set categories = [('semua','Semua'),('indomie','🍜 Indomie'),('nasi','🍚 Nasi'),('minuman','🥤 Minuman'),('topping','🥚 Topping')] %}
+      {% for val, label in categories %}
+      <button onclick="setCategory('{{ val }}')" data-cat="{{ val }}"
+              class="cat-btn flex-shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all
+                     {% if val == 'semua' %}bg-primary-500 text-white{% else %}bg-gray-100 text-gray-600 hover:bg-primary-50 hover:text-primary-600{% endif %}">
+        {{ label }}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Menu Grid -->
+  <div id="menu-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    {% for m in menu %}
+    {# Simpan data sebagai data-attribute untuk menghindari quoting error di onclick #}
+    <div class="menu-card bg-white rounded-2xl overflow-hidden shadow-sm"
+         data-kategori="{{ m.kategori }}" data-nama="{{ m.nama }}"
+         data-id="{{ m.id }}" data-harga="{{ m.harga }}" data-foto="{{ m.foto or '' }}"
+         {% if m.stok > 0 %}onclick="openMenuModalFromEl(this)" style="cursor:pointer"{% endif %}>
+
+      <div class="aspect-square overflow-hidden bg-gradient-to-br from-orange-50 to-red-50 relative">
+        <img src="{% if m.foto %}{{ url_for('static', filename=m.foto) }}{% else %}data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs={% endif %}"
+             alt="{{ m.nama }}" class="w-full h-full object-cover {{ 'opacity-40 grayscale' if m.stok == 0 else '' }}"
+             loading="lazy"
+             data-emoji="{{ '🍜' if m.kategori == 'indomie' else ('🍚' if m.kategori == 'nasi' else ('🥤' if m.kategori == 'minuman' else '🥚')) }}"
+             onerror="imgFallback(this)"/>
+        {% if m.stok == 0 %}
+        <div class="absolute inset-0 flex items-center justify-center">
+          <span class="badge-habis text-xs font-bold px-3 py-1 rounded-full">Habis</span>
+        </div>
+        {% endif %}
+        {% if m.stok > 0 and m.stok < 10 %}
+        <div class="absolute top-2 left-2">
+          <span class="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-0.5 rounded-full">Sisa {{ m.stok }}</span>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="p-3">
+        <h3 class="font-bold text-charcoal text-sm leading-tight line-clamp-2 mb-2">{{ m.nama }}</h3>
+        <div class="flex items-center justify-between">
+          <span class="text-primary-500 font-extrabold text-sm">Rp {{ '{:,}'.format(m.harga).replace(',','.') }}</span>
+          {% if m.stok > 0 %}
+          <button onclick="event.stopPropagation(); openMenuModalFromEl(this.closest('.menu-card'))"
+                  class="bg-primary-500 hover:bg-primary-600 text-white rounded-lg w-8 h-8 flex items-center justify-center transition text-lg font-bold">+</button>
+          {% else %}
+          <span class="text-gray-400 text-xs">Habis</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- ===== MODAL DETAIL MENU ===== -->
+<div id="modal-menu" class="modal-overlay fixed inset-0 bg-black/50 z-50 hidden flex items-end md:items-center justify-center p-4"
+     onclick="if(event.target===this)closeModal('modal-menu')">
+  <div class="modal-box bg-white w-full max-w-md rounded-t-3xl md:rounded-3xl overflow-hidden scale-95 opacity-0 transition-all duration-200">
+    <div class="aspect-video overflow-hidden relative">
+      <img id="modal-foto" src="" alt="" class="w-full h-full object-cover"
+           onerror="this.onerror=null;this.src='data:image/svg+xml,' + encodeURIComponent('<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'200\'><rect width=\'400\' height=\'200\' fill=\'%23ff6b35\'/><text x=\'50%\' y=\'50%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'white\' font-size=\'60\'>🍜</text></svg>')"/>
+      <button onclick="closeModal('modal-menu')"
+              class="absolute top-3 right-3 bg-black/50 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-black/70 transition">✕</button>
+    </div>
+    <div class="p-5">
+      <h3 id="modal-nama" class="text-xl font-extrabold text-charcoal mb-1"></h3>
+      <div id="modal-harga" class="text-primary-500 font-extrabold text-2xl mb-4"></div>
+
+      <!-- Level Pedas -->
+      <div class="mb-4">
+        <label class="block text-sm font-semibold text-gray-700 mb-2">🌶️ Level Pedas</label>
+        <div class="flex gap-2 flex-wrap" id="modal-pedas-group">
+          {% for level in ['Tidak Pedas','Level 1','Level 2','Level 3','Extra Hot'] %}
+          <button onclick="selectPedas(this)"
+                  class="pedas-btn px-3 py-1.5 rounded-xl border-2 text-sm font-medium hover:border-primary-400 transition
+                         {{ 'border-primary-500 bg-primary-50 text-primary-600' if loop.first else 'border-gray-200' }}">
+            {{ level }}
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Catatan -->
+      <div class="mb-4">
+        <label class="block text-sm font-semibold text-gray-700 mb-2">📝 Catatan Khusus</label>
+        <textarea id="modal-catatan" rows="2" placeholder="Contoh: tanpa bawang, tambah kecap..."
+                  class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300 resize-none"></textarea>
+      </div>
+
+      <!-- Qty + tombol -->
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 bg-gray-100 rounded-xl p-1">
+          <button onclick="changeModalQty(-1)"
+                  class="w-8 h-8 flex items-center justify-center bg-white rounded-lg font-bold text-primary-500 shadow-sm hover:bg-primary-50 transition text-lg">−</button>
+          <span id="modal-qty" class="font-bold text-charcoal w-6 text-center">1</span>
+          <button onclick="changeModalQty(1)"
+                  class="w-8 h-8 flex items-center justify-center bg-white rounded-lg font-bold text-primary-500 shadow-sm hover:bg-primary-50 transition text-lg">+</button>
+        </div>
+        <button onclick="addToCartFromModal()"
+                class="flex-1 bg-primary-500 hover:bg-primary-600 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
+          Tambah — <span id="modal-total-price">Rp 0</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Floating cart -->
+<a href="/keranjang" class="floating-cart-btn floating-cart fixed bottom-4 right-4 z-50 bg-primary-500 hover:bg-primary-600 text-white rounded-2xl px-5 py-3 flex items-center gap-3 shadow-xl transition-all hover:scale-105 hidden">
+  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+  </svg>
+  <span class="font-bold text-sm cart-total-display">Rp 0</span>
+  <span class="cart-badge bg-white text-primary-500 text-xs font-extrabold w-5 h-5 rounded-full flex items-center justify-center hidden">0</span>
+</a>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function imgFallback(img) {
+  const emoji = img.dataset.emoji || '🍜';
+  img.onerror = null;
+  img.src = 'data:image/svg+xml,' + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300"><rect width="300" height="300" rx="0" fill="#ff6b35"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="80">${emoji}</text></svg>`
+  );
+}
+
+let currentItem = null;
+let modalQty = 1;
+let selectedPedas = 'Tidak Pedas';
+
+function setCategory(cat) {
+  document.querySelectorAll('.cat-btn').forEach(b => {
+    const active = b.dataset.cat === cat;
+    b.classList.toggle('bg-primary-500', active);
+    b.classList.toggle('text-white', active);
+    b.classList.toggle('bg-gray-100', !active);
+    b.classList.toggle('text-gray-600', !active);
+  });
+  filterMenuByCategory(cat);
+}
+
+// Baca data dari data-attribute untuk menghindari quoting error
+function openMenuModalFromEl(el) {
+  const item = {
+    id:    el.dataset.id,
+    nama:  el.dataset.nama,
+    harga: parseInt(el.dataset.harga),
+    foto:  el.dataset.foto,
+  };
+  openMenuModal(item);
+}
+
+function openMenuModal(item) {
+  currentItem = item;
+  modalQty = 1;
+  selectedPedas = 'Tidak Pedas';
+  document.getElementById('modal-nama').textContent = item.nama;
+  document.getElementById('modal-harga').textContent = formatRupiah(item.harga);
+  document.getElementById('modal-qty').textContent = '1';
+  document.getElementById('modal-catatan').value = '';
+
+  const fotoEl = document.getElementById('modal-foto');
+  fotoEl.src = item.foto ? `/static/${item.foto}` : `https://placehold.co/400x200/ff6b35/fff?text=${encodeURIComponent(item.nama)}`;
+  fotoEl.alt = item.nama;
+
+  updateModalTotal();
+
+  // Reset level pedas ke default
+  document.querySelectorAll('.pedas-btn').forEach((b, i) => {
+    if (i === 0) {
+      b.classList.add('border-primary-500', 'bg-primary-50', 'text-primary-600');
+      b.classList.remove('border-gray-200');
+    } else {
+      b.classList.remove('border-primary-500', 'bg-primary-50', 'text-primary-600');
+      b.classList.add('border-gray-200');
+    }
+  });
+  openModal('modal-menu');
+}
+
+function selectPedas(btn) {
+  selectedPedas = btn.textContent.trim();
+  document.querySelectorAll('.pedas-btn').forEach(b => {
+    b.classList.remove('border-primary-500', 'bg-primary-50', 'text-primary-600');
+    b.classList.add('border-gray-200');
+  });
+  btn.classList.add('border-primary-500', 'bg-primary-50', 'text-primary-600');
+  btn.classList.remove('border-gray-200');
+}
+
+function changeModalQty(delta) {
+  modalQty = Math.max(1, modalQty + delta);
+  document.getElementById('modal-qty').textContent = modalQty;
+  updateModalTotal();
+}
+
+function updateModalTotal() {
+  if (!currentItem) return;
+  document.getElementById('modal-total-price').textContent = formatRupiah(currentItem.harga * modalQty);
+}
+
+function addToCartFromModal() {
+  if (!currentItem) return;
+  const catatan = document.getElementById('modal-catatan').value.trim();
+  const payload = {
+    menu_id: parseInt(currentItem.id),
+    jumlah: modalQty,
+    varian_label: selectedPedas,
+    catatan: catatan ? `${selectedPedas}${catatan ? ' — ' + catatan : ''}` : selectedPedas,
+  };
+
+  fetch('/keranjang/tambah', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      // Update client-side cart for display badge
+      Cart.add({
+        id:     currentItem.id,
+        nama:   currentItem.nama,
+        harga:  currentItem.harga,
+        qty:    modalQty,
+        varian: selectedPedas,
+        catatan: catatan,
+        foto:   currentItem.foto ? `/static/${currentItem.foto}` : '',
+      });
+      showToast(`${currentItem.nama} ditambahkan!`, 'success');
+    } else {
+      showToast(data.error || 'Gagal menambahkan ke keranjang', 'error');
+    }
+  })
+  .catch(() => showToast('Koneksi gagal', 'error'));
+  closeModal('modal-menu');
+}
+</script>
+{% endblock %}
+
+{% block footer %}{% include "customer/footer.html" %}{% endblock %}
